@@ -163,12 +163,15 @@ private:
 		u32 drawlist_id = 0;
 		u64 queued_ms = 0;
 		u64 used_ms = 0;
+		// when it came close enough to show detail again
+		u64 near_ms = 0;
 	};
 
 	// Distance from the camera to a region's center, in BS
 	f32 lodDistance(v3s16 region_pos) const;
-	// Whether a region is drawn from its simplified mesh
-	bool useLod(v3s16 region_pos, bool far, u64 now_ms);
+	// Whether a region at distance d is drawn from its simplified mesh
+	bool useLod(v3s16 region_pos, f32 d, u64 now_ms);
+	bool detailMeshesMade(v3s16 region_pos);
 	void dropLodMeshes(LodRegion &region);
 	void dropDetailMesh(MapBlock *block);
 

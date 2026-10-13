@@ -463,8 +463,9 @@ public:
 	// marks the sides which are opaque: 00+Z-Z+Y-Y+X-X
 	u8 solid_sides = 0;
 
-	// no detail mesh: far away, drawn from the simplified mesh of its region
-	bool lod_no_mesh = false;
+	// detail mesh left out far away, where the region is drawn simplified
+	enum class DetailMesh : u8 { Made, LeftOut, Asked };
+	DetailMesh detail_mesh = DetailMesh::Made;
 #endif
 
 private:
