@@ -112,8 +112,8 @@ void set_default_settings()
 	settings->setDefault("screenshot_path", "screenshots");
 	settings->setDefault("screenshot_format", "png");
 	settings->setDefault("screenshot_quality", "0");
-	settings->setDefault("client_unload_unused_data_timeout", "600");
-	settings->setDefault("client_unload_out_of_view", "false");
+	settings->setDefault("client_unload_unused_data_timeout", "120");
+	settings->setDefault("client_unload_out_of_view", "true");
 	settings->setDefault("client_mapblock_limit", "9300"); // about 145 MB
 	settings->setDefault("enable_build_where_you_stand", "false");
 	settings->setDefault("curl_timeout", "20000");
@@ -255,7 +255,7 @@ void set_default_settings()
 	settings->setDefault("fps_max_unfocused", "10");
 	settings->setDefault("viewing_range", "200");
 	settings->setDefault("client_mesh_chunk", "2");
-	settings->setDefault("client_lod_distance", "0");
+	settings->setDefault("client_lod_distance", "160");
 	settings->setDefault("screen_w", "1024");
 	settings->setDefault("screen_h", "600");
 	settings->setDefault("window_maximized", "false");
