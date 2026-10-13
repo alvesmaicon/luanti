@@ -508,6 +508,15 @@ CIrrDeviceSDL::CIrrDeviceSDL(const SIrrlichtCreationParameters &param) :
 		createGUIAndScene();
 		VideoDriver->OnResize(core::dimension2d<u32>(Width, Height));
 	}
+
+#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
+	const char *video_driver = SDL_GetCurrentVideoDriver();
+	GamepadMouse = video_driver && SDL_strcasecmp(video_driver, "kmsdrm") == 0; // SDL2 says KMSDRM
+	if (GamepadMouse && GUIEnvironment) {
+		os::Printer::log("No system cursor (KMSDRM): the gamepad drives a drawn one in menus", ELL_INFORMATION);
+		GUIEnvironment->setSoftwareCursor(CursorControl);
+	}
+#endif
 }
 
 //! destructor
@@ -1191,6 +1200,9 @@ bool CIrrDeviceSDL::run()
 			irrevent.GamepadButtonEvent.ID = id;
 			irrevent.GamepadButtonEvent.PressedDown = (SDL_event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN);
 			recentGamepadID = id;
+			if (GamepadMouse && gamepadButtonAsMouse(irrevent.GamepadButtonEvent.Button,
+					irrevent.GamepadButtonEvent.PressedDown))
+				break;
 			postEventFromUser(irrevent);
 			break;
 		}
@@ -1208,6 +1220,8 @@ bool CIrrDeviceSDL::run()
 #endif
 			irrevent.GamepadAxisEvent.ID = id;
 			recentGamepadID = id;
+			if (irrevent.GamepadAxisEvent.Axis < GamepadAxis::COUNT)
+				GamepadAxes[static_cast<int>(irrevent.GamepadAxisEvent.Axis)] = irrevent.GamepadAxisEvent.Value;
 			postEventFromUser(irrevent);
 			break;
 		}
@@ -1219,8 +1233,180 @@ bool CIrrDeviceSDL::run()
 		resetReceiveTextInputEvents();
 	} // end while
 
+#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
+	if (GamepadMouse && !Close)
+		moveCursorWithGamepad();
+#endif
+
 	return !Close;
 }
+
+#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
+//! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
+bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+{
+	switch (button) {
+	case GamepadButton::SOUTH:
+	case GamepadButton::WEST:
+	case GamepadButton::EAST:
+	case GamepadButton::NORTH:
+	case GamepadButton::START:
+	case GamepadButton::LEFT_SHOULDER:
+	case GamepadButton::RIGHT_SHOULDER:
+	case GamepadButton::DPAD_UP:
+	case GamepadButton::DPAD_DOWN:
+	case GamepadButton::DPAD_LEFT:
+	case GamepadButton::DPAD_RIGHT:
+		break;
+	default:
+		return false;
+	}
+
+	const u32 bit = 1u << static_cast<u32>(button);
+	if (down) {
+		if (!CursorControl->isVisible())
+			return false;
+		GamepadMouseButtons |= bit;
+	} else {
+		if (!(GamepadMouseButtons & bit))
+			return false;
+		GamepadMouseButtons &= ~bit;
+	}
+
+	switch (button) {
+	case GamepadButton::SOUTH:
+	case GamepadButton::NORTH:
+		postGamepadClick(SDL_BUTTON_LEFT, down);
+		break;
+	case GamepadButton::WEST:
+		postGamepadClick(SDL_BUTTON_RIGHT, down);
+		break;
+	case GamepadButton::EAST:
+	case GamepadButton::START:
+		postGamepadEscape(down);
+		break;
+	case GamepadButton::LEFT_SHOULDER:
+	case GamepadButton::RIGHT_SHOULDER:
+		if (down)
+			postGamepadMouse(EMIE_MOUSE_WHEEL, button == GamepadButton::LEFT_SHOULDER ? 1.0f : -1.0f);
+		break;
+	default: // D-pad: moveCursorWithGamepad() reads it from GamepadMouseButtons
+		break;
+	}
+	return true;
+}
+
+//! Either stick moves the cursor (slowly near the center, a screen height per second at full tilt);
+//! the D-pad nudges it
+void CIrrDeviceSDL::moveCursorWithGamepad()
+{
+	const u32 now = os::Timer::getRealTime();
+	const f32 dt = core::clamp((now - GamepadCursorTime) / 1000.0f, 0.0f, 0.1f);
+	GamepadCursorTime = now;
+
+	if (!CursorControl->isVisible()) {
+		GamepadCursorShown = false;
+		return;
+	}
+	if (!GamepadCursorShown) {
+		// a menu just opened: start in the middle
+		GamepadCursorShown = true;
+		MouseX = Width / 2;
+		MouseY = Height / 2;
+		GamepadCursorX = MouseX;
+		GamepadCursorY = MouseY;
+		postGamepadMouse(EMIE_MOUSE_MOVED);
+		return;
+	}
+
+	f32 vx = 0.0f, vy = 0.0f;
+	for (int axis : {static_cast<int>(GamepadAxis::LEFTX), static_cast<int>(GamepadAxis::RIGHTX)}) {
+		const f32 x = GamepadAxes[axis] / 32767.0f, y = GamepadAxes[axis + 1] / 32767.0f;
+		const f32 len = core::squareroot(x * x + y * y);
+		if (len < 0.25f)
+			continue;
+		f32 speed = core::min_((len - 0.25f) / 0.75f, 1.0f);
+		speed *= speed;
+		vx += x / len * speed;
+		vy += y / len * speed;
+	}
+	const auto held = [this](GamepadButton b) {
+		return static_cast<f32>((GamepadMouseButtons >> static_cast<u32>(b)) & 1);
+	};
+	vx += 0.15f * (held(GamepadButton::DPAD_RIGHT) - held(GamepadButton::DPAD_LEFT));
+	vy += 0.15f * (held(GamepadButton::DPAD_DOWN) - held(GamepadButton::DPAD_UP));
+	if (vx == 0.0f && vy == 0.0f)
+		return;
+
+	// a real mouse may have moved it meanwhile
+	if (static_cast<s32>(GamepadCursorX) != MouseX || static_cast<s32>(GamepadCursorY) != MouseY) {
+		GamepadCursorX = MouseX;
+		GamepadCursorY = MouseY;
+	}
+	const f32 step = Height * dt;
+	GamepadCursorX = core::clamp(GamepadCursorX + vx * step, 0.0f, Width - 1.0f);
+	GamepadCursorY = core::clamp(GamepadCursorY + vy * step, 0.0f, Height - 1.0f);
+	const s32 x = static_cast<s32>(GamepadCursorX), y = static_cast<s32>(GamepadCursorY);
+	if (x == MouseX && y == MouseY)
+		return;
+	MouseX = x;
+	MouseY = y;
+	postGamepadMouse(EMIE_MOUSE_MOVED);
+}
+
+//! A click at the cursor, as SDL_EVENT_MOUSE_BUTTON_DOWN/UP would post it
+void CIrrDeviceSDL::postGamepadClick(u32 button, bool down)
+{
+	if (down)
+		MouseButtonStates |= SDL_BUTTON_MASK(button);
+	else
+		MouseButtonStates &= ~SDL_BUTTON_MASK(button);
+
+	SEvent irrevent{};
+	irrevent.EventType = EET_MOUSE_INPUT_EVENT;
+	if (button == SDL_BUTTON_LEFT)
+		irrevent.MouseInput.Event = down ? EMIE_LMOUSE_PRESSED_DOWN : EMIE_LMOUSE_LEFT_UP;
+	else
+		irrevent.MouseInput.Event = down ? EMIE_RMOUSE_PRESSED_DOWN : EMIE_RMOUSE_LEFT_UP;
+	irrevent.MouseInput.Button = button;
+	irrevent.MouseInput.ButtonStates = MouseButtonStates;
+	irrevent.MouseInput.X = MouseX;
+	irrevent.MouseInput.Y = MouseY;
+	postEventFromUser(irrevent);
+
+	if (down) {
+		u32 clicks = checkSuccessiveClicks(MouseX, MouseY, irrevent.MouseInput.Event);
+		if (clicks == 2 || clicks == 3) {
+			const EMOUSE_INPUT_EVENT first = clicks == 2 ? EMIE_LMOUSE_DOUBLE_CLICK : EMIE_LMOUSE_TRIPLE_CLICK;
+			irrevent.MouseInput.Event = (EMOUSE_INPUT_EVENT)(first + irrevent.MouseInput.Event - EMIE_LMOUSE_PRESSED_DOWN);
+			postEventFromUser(irrevent);
+		}
+	}
+}
+
+void CIrrDeviceSDL::postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel)
+{
+	SEvent irrevent{};
+	irrevent.EventType = EET_MOUSE_INPUT_EVENT;
+	irrevent.MouseInput.Event = event;
+	irrevent.MouseInput.Wheel = wheel;
+	irrevent.MouseInput.ButtonStates = MouseButtonStates;
+	irrevent.MouseInput.X = MouseX;
+	irrevent.MouseInput.Y = MouseY;
+	postEventFromUser(irrevent);
+}
+
+//! B, Y and START close menus, as Escape does
+void CIrrDeviceSDL::postGamepadEscape(bool down)
+{
+	SEvent irrevent{};
+	irrevent.EventType = EET_KEY_INPUT_EVENT;
+	irrevent.KeyInput.Key = KEY_ESCAPE;
+	irrevent.KeyInput.SystemKeyCode = SDL_SCANCODE_ESCAPE;
+	irrevent.KeyInput.PressedDown = down;
+	postEventFromUser(irrevent);
+}
+#endif // _IRR_COMPILE_WITH_JOYSTICK_EVENTS_
 
 void CIrrDeviceSDL::updateSizeAndScale()
 {

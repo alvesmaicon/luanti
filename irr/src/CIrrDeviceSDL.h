@@ -330,6 +330,20 @@ private:
 	SDL_JoystickID recentGamepadID = 0;
 #endif // _IRR_USE_SDL3_
 	SDL_Gamepad *getRecentGamepad() const;
+
+	// KMSDRM has no system cursor: while the cursor is visible (menus, inventory)
+	// the gamepad drives it and the GUI draws it
+	bool GamepadMouse = false;
+	bool GamepadCursorShown = false;
+	s16 GamepadAxes[static_cast<int>(GamepadAxis::COUNT)] = {};
+	u32 GamepadMouseButtons = 0; // pressed as the mouse, so their release goes the same way
+	u32 GamepadCursorTime = 0;
+	f32 GamepadCursorX = 0.0f, GamepadCursorY = 0.0f;
+	bool gamepadButtonAsMouse(GamepadButton button, bool down);
+	void moveCursorWithGamepad();
+	void postGamepadClick(u32 button, bool down);
+	void postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel = 0.0f);
+	void postGamepadEscape(bool down);
 #endif // _IRR_COMPILE_WITH_JOYSTICK_EVENTS_
 
 	s32 MouseX, MouseY;

@@ -25,6 +25,8 @@ public:
 	//! draws all gui elements
 	void drawAll(bool useScreenSize) override;
 
+	void setSoftwareCursor(ICursorControl *cursor) override;
+
 	//! returns the current video driver
 	video::IVideoDriver *getVideoDriver() const override;
 
@@ -169,6 +171,8 @@ private:
 
 	void loadBuiltInFont();
 
+	void drawSoftwareCursor();
+
 	struct SFont
 	{
 		io::SNamedPath NamedPath;
@@ -213,6 +217,8 @@ private:
 	io::IFileSystem *FileSystem;
 	IEventReceiver *UserReceiver;
 	IOSOperator *Operator;
+	ICursorControl *SoftwareCursor = nullptr;
+	video::ITexture *SoftwareCursorTexture = nullptr;
 	u32 FocusFlags;
 	core::array<IGUIElement *> DeletionQueue;
 

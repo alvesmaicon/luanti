@@ -42,6 +42,7 @@ class IGUITabControl;
 class IGUITab;
 class IGUIComboBox;
 class IGUIButton;
+class ICursorControl;
 
 //! GUI Environment. Used as factory and manager of all other GUI elements.
 /** \par This element can create the following events of type EGUI_EVENT_TYPE (which are passed on to focused sub-elements):
@@ -57,6 +58,9 @@ public:
 	/** \param  When true ensure the GuiEnvironment (aka the RootGUIElement) has the same size as the current driver screensize.
 				Can be set to false to control that size yourself, p.E when not the full size should be used for UI. */
 	virtual void drawAll(bool useScreenSize = true) = 0;
+
+	//! drawAll() ends with an arrow at this cursor while it is visible (no system cursor, e.g. KMSDRM)
+	virtual void setSoftwareCursor(ICursorControl *cursor) {}
 
 	//! Sets the focus to an element.
 	/** Causes a EGET_ELEMENT_FOCUS_LOST event followed by a
