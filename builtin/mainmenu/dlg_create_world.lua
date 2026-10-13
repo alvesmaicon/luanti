@@ -292,12 +292,17 @@ local function create_world_formspec(dialogdata)
 
 	retval = retval ..
 		"label[0,2;" .. fgettext("Mapgen") .. "]"..
-		"dropdown[0,2.5;6.3;dd_mapgen;" .. mglist .. ";" .. selindex .. "]"
+		"dropdown[0,2.5;6.3;dd_mapgen;" .. mglist .. ";" .. selindex .. "]" ..
+		-- one button that shows the mode and switches it, as in Minecraft
+		"button[0,3.4;6,0.5;btn_game_mode;" ..
+			fgettext("Game mode: $1", fgettext_ne(dialogdata.creative and "Creative" or "Survival")) .. "]" ..
+		"checkbox[0,4.1;cb_mode_change;" .. fgettext("Allow changing the game mode") .. ";" ..
+			tostring(dialogdata.mode_change) .. "]"
 
 	-- Warning when making a devtest world
 	if game.id == "devtest" then
 		retval = retval ..
-			"container[0,3.5]" ..
+			"container[0,5]" ..
 			"box[0,0;5.8,1.7;#ff8800]" ..
 			"textarea[0.4,0.1;6,1.8;;;"..
 			fgettext("Development Test is meant for developers.") .. "]" ..
@@ -389,6 +394,9 @@ local function create_world_buttonhandler(this, fields)
 				mgvalleys_spflags = table_to_flags(this.data.flags.valleys),
 				mgflat_spflags = table_to_flags(this.data.flags.flat),
 			}
+			-- the engine writes both to world.mt: Creative without damage, Survival with it
+			core.settings:set_bool("creative_mode", this.data.creative)
+			core.settings:set_bool("enable_damage", not this.data.creative)
 			message = core.create_world(worldname, game.id, settings)
 		end
 
@@ -396,8 +404,13 @@ local function create_world_buttonhandler(this, fields)
 			core.settings:set("menu_last_game", game.id)
 			menudata.worldlist:set_filtercriteria(game.id)
 			menudata.worldlist:refresh()
-			core.settings:set("mainmenu_last_selected_world",
-					menudata.worldlist:raw_index_by_uid(worldname))
+			local index = menudata.worldlist:raw_index_by_uid(worldname)
+			core.settings:set("mainmenu_last_selected_world", index)
+			-- for the game's mods (goodluckOS's minetest_game switches the mode from the inventory)
+			local world = menudata.worldlist:get_raw_element(index)
+			local conf = Settings(world.path .. DIR_DELIM .. "world.mt")
+			conf:set_bool("allow_mode_change", this.data.mode_change)
+			conf:write()
 		end
 
 		gamedata.errormessage = message
@@ -407,6 +420,16 @@ local function create_world_buttonhandler(this, fields)
 
 	this.data.worldname = fields["te_world_name"]
 	this.data.seed = fields["te_seed"] or ""
+
+	if fields["btn_game_mode"] then
+		this.data.creative = not this.data.creative
+		return true
+	end
+
+	if fields["cb_mode_change"] then
+		this.data.mode_change = core.is_yes(fields["cb_mode_change"])
+		return true
+	end
 
 	if fields["games"] then
 		local gameindex = core.get_textlist_index("games")
@@ -459,6 +482,8 @@ function create_create_world_dlg()
 					nil)
 	retval.data = {
 		worldname = "",
+		creative = false,
+		mode_change = false,
 		-- settings the world is created with:
 		seed = core.settings:get("fixed_map_seed") or "",
 		flags = {
