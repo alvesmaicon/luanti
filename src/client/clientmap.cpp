@@ -1600,6 +1600,16 @@ void ClientMap::reportMetrics(u64 save_time_us, u32 saved_blocks, u32 all_blocks
 	g_profiler->avg("CM::reportMetrics loaded blocks [#]", all_blocks);
 }
 
+bool ClientMap::isOccluder(const MapNode &n) const
+{
+	// Not received (blank mesh holder blocks are full of it): don't guess
+	if (n.getContent() == CONTENT_IGNORE)
+		return false;
+	const ContentFeatures &f = m_nodedef->get(n);
+	// Also what this client draws as an opaque cube, e.g. leaves with leaves_style = opaque
+	return !f.light_propagates || (f.visuals && f.visuals->solidness == 2);
+}
+
 void ClientMap::updateTransparentMeshBuffers()
 {
 	ScopeProfiler sp(g_profiler, "CM::updateTransparentMeshBuffers", SPT_AVG);

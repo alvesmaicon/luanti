@@ -710,7 +710,7 @@ bool Map::isOccluded(const v3s16 pos_camera, const v3s16 pos_target,
 
 		// treat unloaded blocks as transparent
 		// Cannot see through light-blocking nodes --> occluded
-		if (is_valid_position && !m_nodedef->getLightingFlags(node).light_propagates) {
+		if (is_valid_position && isOccluder(node)) {
 			if (++count >= needed_count)
 				return true;
 		}
@@ -729,7 +729,7 @@ bool Map::isOccluded(const v3s16 pos_camera, const v3s16 pos_target,
 
 			// treat unloaded blocks as opaque
 			// Cannot see through non-existent blocks or light-blocking nodes --> occluded
-			if (!is_valid_position || !m_nodedef->getLightingFlags(node).light_propagates) {
+			if (!is_valid_position || isOccluder(node)) {
 				// Note: ignoring needed_count should be fine here since the preliminary search is already done
 				return true;
 			}
@@ -737,6 +737,11 @@ bool Map::isOccluded(const v3s16 pos_camera, const v3s16 pos_target,
 		}
 	}
 	return false;
+}
+
+bool Map::isOccluder(const MapNode &n) const
+{
+	return !m_nodedef->getLightingFlags(n).light_propagates;
 }
 
 bool Map::isBlockOccluded(v3s16 pos_relative, v3s16 cam_pos_nodes, bool dense)
