@@ -6,6 +6,7 @@
 #include "settings.h"
 #include "profiler.h"
 #include "client.h"
+#include "clientmap.h"
 #include "mapblock.h"
 #include "mapblock_mesh.h"
 #include "meshgen/collector.h"
@@ -114,6 +115,10 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool urgent, bool from_neighbo
 	// Mesh is placed at the corner block of a chunk
 	// (where all coordinate are divisible by the chunk size)
 	const v3s16 mesh_position = mesh_grid.getMeshPos(p);
+
+	// Far away blocks are drawn from the simplified mesh of their region
+	if (!m_lod && m_client->getEnv().getClientMap().skipDetailMesh(mesh_position))
+		return true;
 
 	MutexAutoLock lock(m_mutex);
 
