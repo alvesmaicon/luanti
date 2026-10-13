@@ -24,6 +24,7 @@
 
 #include "IWriteFile.h"
 #include "BuiltInFont.h"
+#include "ICursorControl.h"
 #include "os.h"
 
 namespace gui
@@ -111,6 +112,11 @@ CGUIEnvironment::~CGUIEnvironment()
 		Operator = 0;
 	}
 
+	if (SoftwareCursor) {
+		SoftwareCursor->drop();
+		SoftwareCursor = nullptr;
+	}
+
 	if (FileSystem) {
 		FileSystem->drop();
 		FileSystem = 0;
@@ -163,7 +169,71 @@ void CGUIEnvironment::drawAll(bool useScreenSize)
 	draw();
 	OnPostRender(os::Timer::getTime());
 
+	if (SoftwareCursor && SoftwareCursor->isVisible())
+		drawSoftwareCursor();
+
 	clearDeletionQueue();
+}
+
+void CGUIEnvironment::setSoftwareCursor(ICursorControl *cursor)
+{
+	if (cursor)
+		cursor->grab();
+	if (SoftwareCursor)
+		SoftwareCursor->drop();
+	SoftwareCursor = cursor;
+}
+
+//! a 12x19 arrow, tip at (0, 0): '#' outline, '.' fill
+void CGUIEnvironment::drawSoftwareCursor()
+{
+	static const char *const arrow[] = {
+		"#           ",
+		"##          ",
+		"#.#         ",
+		"#..#        ",
+		"#...#       ",
+		"#....#      ",
+		"#.....#     ",
+		"#......#    ",
+		"#.......#   ",
+		"#........#  ",
+		"#.........# ",
+		"#..........#",
+		"#......#####",
+		"#...#..#    ",
+		"#..# #..#   ",
+		"#.#  #..#   ",
+		"##    #..#  ",
+		"      #..#  ",
+		"       ##   ",
+	};
+	const s32 w = 12, h = 19;
+	if (!Driver)
+		return;
+	if (!SoftwareCursorTexture) {
+		video::IImage *img = Driver->createImage(video::ECF_A8R8G8B8, core::dimension2du(16, 32));
+		if (!img)
+			return;
+		img->fill(video::SColor(0, 0, 0, 0));
+		for (s32 y = 0; y < h; ++y)
+			for (s32 x = 0; x < w; ++x) {
+				if (arrow[y][x] == '#')
+					img->setPixel(x, y, video::SColor(255, 0, 0, 0));
+				else if (arrow[y][x] == '.')
+					img->setPixel(x, y, video::SColor(255, 255, 255, 255));
+			}
+		SoftwareCursorTexture = Driver->addTexture("<software cursor>", img);
+		img->drop();
+		if (!SoftwareCursorTexture)
+			return;
+	}
+	// twice as big from 960 pixels high, so it stays visible on bigger screens
+	const s32 scale = core::max_(1, (s32)Driver->getScreenSize().Height / 960 + 1);
+	const core::position2di pos = SoftwareCursor->getPosition();
+	Driver->draw2DImage(SoftwareCursorTexture,
+			core::recti(pos.X, pos.Y, pos.X + w * scale, pos.Y + h * scale),
+			core::recti(0, 0, w, h), nullptr, nullptr, true);
 }
 
 //! sets the focus to an element
