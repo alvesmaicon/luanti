@@ -341,7 +341,10 @@ void GUIFormSpecMenu::parseSize(parserData* data, const std::string &element)
 
 		lockSize(false);
 		if (!g_settings->getBool("touch_gui") && parts.size() == 3) {
-			if (parts[2] == "true") {
+			// on a screen smaller than the 800x600 base the form would be centered off it:
+			// fit it to the screen instead
+			const v2u32 screen = RenderingEngine::get_video_driver()->getScreenSize();
+			if (parts[2] == "true" && screen.X >= 800 && screen.Y >= 600) {
 				lockSize(true,v2u32(800,600));
 			}
 		}
