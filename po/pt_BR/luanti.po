@@ -1044,6 +1044,22 @@ msgstr "Baixa humidade e calor elevado resultam em rios rasos ou secos"
 msgid "Mapgen"
 msgstr "Gerador de Mundo"
 
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Game mode: $1"
+msgstr "Modo de jogo: $1"
+
+#: builtin/mainmenu/common.lua builtin/mainmenu/dlg_create_world.lua
+msgid "Survival"
+msgstr "Sobrevivência"
+
+#: builtin/mainmenu/common.lua builtin/mainmenu/dlg_create_world.lua
+msgid "Creative"
+msgstr "Criativo"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Allow changing the game mode"
+msgstr "Permitir trocar de modo"
+
 #: builtin/mainmenu/dlg_create_world.lua src/settings_translation_file.cpp
 msgid "Mapgen flags"
 msgstr "Opções de geração de mundo"

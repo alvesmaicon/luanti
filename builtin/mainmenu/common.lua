@@ -162,7 +162,12 @@ function menu_render_worldlist()
 	local current_worldlist = menudata.worldlist:get_list()
 
 	for i, v in ipairs(current_worldlist) do
-		retval[#retval+1] = core.formspec_escape(v.name)
+		local name = v.name
+		local creative = Settings(v.path .. DIR_DELIM .. "world.mt"):get_bool("creative_mode")
+		if creative ~= nil then
+			name = name .. " (" .. (creative and fgettext_ne("Creative") or fgettext_ne("Survival")) .. ")"
+		end
+		retval[#retval+1] = core.formspec_escape(name)
 	end
 
 	return table.concat(retval, ",")
