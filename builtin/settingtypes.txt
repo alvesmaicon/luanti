@@ -2122,7 +2122,7 @@ client_mesh_chunk (Client Mesh Chunksize) int 1 1 16
 #    Distance in nodes beyond which regions of 2x2x2 map blocks are drawn from a
 #    simplified mesh, with one cube per 2x2x2 nodes. Saves vertices and memory
 #    in long views. Needs a mesh chunksize of 1 or 2. 0 disables it.
-client_lod_distance (Simplified mesh distance) [client] int 0 0 1000
+client_lod_distance (Simplified mesh distance) [client] int 160 0 1000
 
 #    Decide the color depth of the texture used for the post-processing pipeline.
 #    Reducing this can improve performance, but some effects (e.g. debanding)
@@ -2249,12 +2249,12 @@ prometheus_listener_address (Prometheus listener address) [server] string 127.0.
 max_out_chat_queue_size (Maximum size of the client's outgoing chat queue) [client] int 20 -1 32767
 
 #    Timeout for client to remove unused map data from memory, in seconds.
-client_unload_unused_data_timeout (Mapblock unload timeout) [client] float 600.0 0.0
+client_unload_unused_data_timeout (Mapblock unload timeout) [client] float 120.0 0.0
 
 #    Also unload, after the timeout above, blocks in range that are out of view:
 #    far behind or beside the camera. Saves memory while moving; turning back
 #    shows those blocks loading again.
-client_unload_out_of_view (Unload blocks out of view) [client] bool false
+client_unload_out_of_view (Unload blocks out of view) [client] bool true
 
 #    Maximum number of mapblocks for client to be kept in memory.
 #    Note that there is an internal dynamic minimum number of blocks that
