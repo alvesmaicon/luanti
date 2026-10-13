@@ -390,6 +390,8 @@ void ClientMap::clearDrawList()
 
 // Detail meshes are made this many nodes before they are drawn
 static constexpr f32 LOD_DETAIL_MARGIN = 2 * MAP_BLOCKSIZE;
+// A region drawn simplified shows detail again this many nodes closer
+static constexpr f32 LOD_HYSTERESIS = 8;
 
 static const v3s16 lod_face_dirs[6] = {
 	v3s16(0, 1, 0), v3s16(0, -1, 0), v3s16(1, 0, 0),
@@ -404,20 +406,50 @@ f32 ClientMap::lodDistance(v3s16 region_pos) const
 	return center.getDistanceFrom(m_camera_position);
 }
 
-bool ClientMap::useLod(v3s16 region_pos, bool far, u64 now_ms)
+bool ClientMap::detailMeshesMade(v3s16 region_pos)
+{
+	constexpr s16 R = LodMeshGenerator::REGION;
+	const s16 step = m_client->getMeshGrid().cell_size;
+	v3s16 p;
+	for (p.Z = 0; p.Z < R; p.Z += step)
+	for (p.Y = 0; p.Y < R; p.Y += step)
+	for (p.X = 0; p.X < R; p.X += step) {
+		MapBlock *block = getBlockNoCreateNoEx(region_pos + p);
+		if (block && block->detail_mesh != MapBlock::DetailMesh::Made)
+			return false;
+	}
+	return true;
+}
+
+bool ClientMap::useLod(v3s16 region_pos, f32 d, u64 now_ms)
 {
 	auto it = m_lod_regions.find(region_pos);
+	if (it != m_lod_regions.end() && it->second.drawlist_id == m_drawlist_id)
+		return it->second.lod;
+
+	const f32 switch_d = m_cache_lod_distance * BS;
+	bool far = d > switch_d;
+	if (!far && it != m_lod_regions.end() && it->second.lod) {
+		// Shown simplified, it shows detail again a bit closer, once its detail meshes are made
+		LodRegion &region = it->second;
+		if (d > switch_d - LOD_HYSTERESIS * BS) {
+			far = true;
+		} else {
+			if (!region.near_ms)
+				region.near_ms = now_ms;
+			far = now_ms < region.near_ms + 3000 && !detailMeshesMade(region_pos);
+		}
+	}
 	if (!far) {
 		if (it != m_lod_regions.end()) {
 			it->second.lod = false;
+			it->second.near_ms = 0;
 			it->second.drawlist_id = m_drawlist_id;
 		}
 		return false;
 	}
 
 	LodRegion &region = it != m_lod_regions.end() ? it->second : m_lod_regions[region_pos];
-	if (region.drawlist_id == m_drawlist_id)
-		return region.lod;
 	region.drawlist_id = m_drawlist_id;
 	region.used_ms = now_ms;
 
@@ -453,7 +485,7 @@ void ClientMap::dropDetailMesh(MapBlock *block)
 	invalidateMapBlockMesh(block->mesh);
 	delete block->mesh;
 	block->mesh = nullptr;
-	block->lod_no_mesh = true;
+	block->detail_mesh = MapBlock::DetailMesh::LeftOut;
 }
 
 bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
@@ -471,7 +503,7 @@ bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
 		return false;
 	if (block->mesh)
 		dropDetailMesh(block);
-	block->lod_no_mesh = true;
+	block->detail_mesh = MapBlock::DetailMesh::LeftOut;
 	return true;
 }
 
@@ -601,8 +633,8 @@ void ClientMap::updateDrawList()
 				v3s16 block_pos_nodes = block->getPosRelative();
 
 				// Left without a detail mesh while the BFS culler drew it simplified
-				if (block->lod_no_mesh) {
-					block->lod_no_mesh = false;
+				if (block->detail_mesh == MapBlock::DetailMesh::LeftOut) {
+					block->detail_mesh = MapBlock::DetailMesh::Asked;
 					m_client->addUpdateMeshTask(block_pos);
 				}
 
@@ -760,11 +792,11 @@ void ClientMap::updateDrawList()
 			if (lod_enabled && block) {
 				const f32 d = lodDistance(region_pos);
 				const bool detail_wanted = d <= (m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS;
-				if (block->lod_no_mesh && detail_wanted) {
-					block->lod_no_mesh = false;
+				if (block->detail_mesh == MapBlock::DetailMesh::LeftOut && detail_wanted) {
+					block->detail_mesh = MapBlock::DetailMesh::Asked;
 					m_client->addUpdateMeshTask(block_coord);
 				}
-				lod = useLod(region_pos, d > m_cache_lod_distance * BS, now_ms);
+				lod = useLod(region_pos, d, now_ms);
 				// Far enough not to need its detail mesh soon
 				if (lod && mesh && !detail_wanted)
 					dropDetailMesh(block);

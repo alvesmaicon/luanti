@@ -651,6 +651,7 @@ void Client::step(float dtime)
 				delete block->mesh;
 				block->mesh = nullptr;
 				block->solid_sides = r.solid_sides;
+				block->detail_mesh = MapBlock::DetailMesh::Made;
 
 				if (r.mesh) {
 					minimap_mapblocks = r.mesh->moveMinimapMapblocks();
@@ -1808,7 +1809,6 @@ void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
 	if (b == NULL)
 		return;
 
-	m_env.getClientMap().markLodDirty(p);
 	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, ack_to_server, urgent);
 }
 
