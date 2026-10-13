@@ -615,6 +615,14 @@ void Client::step(float dtime)
 		{
 			num_processed_meshes++;
 
+			if (r.lod) {
+				m_env.getClientMap().setLodMesh(r.p, std::move(r.mesh), r.skirts);
+				for (auto block : r.map_blocks)
+					if (block)
+						block->refDrop();
+				continue;
+			}
+
 			std::vector<MinimapMapblock*> minimap_mapblocks;
 			bool do_mapper_update = true;
 
@@ -1801,12 +1809,19 @@ void Client::addUpdateMeshTask(v3s16 p, bool urgent)
 	if (b == NULL)
 		return;
 
+	m_env.getClientMap().markLodDirty(p);
 	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, urgent);
 }
 
 void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool urgent)
 {
+	m_env.getClientMap().markLodDirty(blockpos);
 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, urgent, true);
+}
+
+void Client::addUpdateLodMeshTask(v3s16 blockpos)
+{
+	m_mesh_update_manager->updateLod(&m_env.getMap(), blockpos);
 }
 
 void Client::addUpdateMeshTaskForNode(v3s16 nodepos, bool urgent)
@@ -1815,6 +1830,7 @@ void Client::addUpdateMeshTaskForNode(v3s16 nodepos, bool urgent)
 
 	v3s16 blockpos = getNodeBlockPos(nodepos);
 	v3s16 blockpos_relative = blockpos * MAP_BLOCKSIZE;
+	m_env.getClientMap().markLodDirty(blockpos);
 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, urgent, false);
 	// Leading edge
 	if (nodepos.X == blockpos_relative.X)

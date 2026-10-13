@@ -460,9 +460,6 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
 {
 	ZoneScoped;
 
-	for (auto &m : m_mesh)
-		m = make_irr<scene::SMesh>();
-
 	auto mesh_grid = data->m_mesh_grid;
 	v3s16 bp = data->m_blockpos;
 	// Only generate minimap mapblocks at grid aligned coordinates.
@@ -494,6 +491,24 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
 		// Generate everything
 		MapblockMeshGenerator(data, &collector).generate();
 	}
+
+	build(collector, data->m_side_length);
+}
+
+MapBlockMesh::MapBlockMesh(Client *client, MeshCollector &collector, u16 side_length):
+	m_tsrc(client->getTextureSource()),
+	m_shdrsrc(client->getShaderSource()),
+	m_bounding_sphere_center((side_length * 0.5f - 0.5f) * BS),
+	m_animation_force_timer(0), // force initial animation
+	m_last_crack(-1)
+{
+	build(collector, side_length);
+}
+
+void MapBlockMesh::build(MeshCollector &collector, u16 side_length)
+{
+	for (auto &m : m_mesh)
+		m = make_irr<scene::SMesh>();
 
 	/*
 		Convert MeshCollector to SMesh
@@ -571,7 +586,7 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
 		}
 	}
 
-	m_bsp_tree.buildTree(&m_transparent_triangles, data->m_side_length);
+	m_bsp_tree.buildTree(&m_transparent_triangles, side_length);
 
 	// Check if animation is required for this mesh
 	m_has_animation =

@@ -20,6 +20,7 @@ namespace video {
 
 class Client;
 class NodeDefManager;
+struct MeshCollector;
 class IShaderSource;
 class ITextureSource;
 struct LightPair;
@@ -51,6 +52,8 @@ struct MeshMakeData
 	bool m_smooth_lighting = false;
 	bool m_enable_water_reflections = false;
 	bool m_enable_waving_water = false;
+	// simplified mesh for far away (meshgen/lod.h): the area is a region of 2x2x2 blocks
+	bool m_lod = false;
 
 	const NodeDefManager *m_nodedef;
 
@@ -180,6 +183,8 @@ class MapBlockMesh
 public:
 	// Builds the mesh given
 	MapBlockMesh(Client *client, MeshMakeData *data);
+	// Builds the mesh from what a generator collected, for an area of side_length nodes
+	MapBlockMesh(Client *client, MeshCollector &collector, u16 side_length);
 	~MapBlockMesh();
 
 	// Main animation function, parameters:
@@ -277,6 +282,7 @@ public:
 	}
 
 private:
+	void build(MeshCollector &collector, u16 side_length);
 
 	typedef std::pair<u8 /* layer index */, u32 /* buffer index */> MeshIndex;
 
