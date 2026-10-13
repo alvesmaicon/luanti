@@ -596,8 +596,7 @@ void main(void)
 	// As additions usually come for free following a multiplication, the new formula
 	// should be more efficient as well.
 	// Note: clarity = (1 - fogginess)
-	float clarity = clamp(fogShadingParameter
-		- fogShadingParameter * length(eyeVec / fogDistance), 0.0, 1.0);
+	float clarity = varColor.a;
 	float fogColorMax = max(max(fogColor.r, fogColor.g), fogColor.b);
 	// Prevent zero division.
 	if (fogColorMax < 0.0000001) fogColorMax = 1.0;
