@@ -80,7 +80,8 @@ constexpr auto DEFAULT_ENCODING = ([] () -> const char* {
 	if constexpr (sz == 2) {
 		return (BYTE_ORDER == BIG_ENDIAN) ? "UTF-16BE" : "UTF-16LE";
 	} else {
-		return (BYTE_ORDER == BIG_ENDIAN) ? "UTF-32BE" : "UTF-32LE";
+		// UCS-4 is built into glibc; UTF-32 needs a gconv module that small systems leave out
+		return (BYTE_ORDER == BIG_ENDIAN) ? "UCS-4BE" : "UCS-4LE";
 	}
 })();
 
