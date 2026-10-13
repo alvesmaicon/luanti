@@ -7,6 +7,74 @@
 </div>
 <br>
 
+## This fork: Luanti for handhelds
+
+`handheld/5.17` is Luanti 5.17.0 plus changes for weak hardware: an old GLES 2.0 GPU, a few hundred MB of RAM, a small screen. It is developed and measured on a GA36-MB handheld (an R36S clone: Allwinner A33, 4x Cortex-A7 at 1.2 GHz, Mali-400 through Mesa's lima driver, 512 MB of RAM, 640x480 screen), where it ships with [goodluckOS](https://github.com/alvesmaicon/goodluckOS).
+
+This fork is not affiliated with the Luanti project. The changes were written with AI assistance (Claude). Luanti's [AI policy](doc/developing/ai_policy.md) doesn't accept that kind of contribution, so none of it is proposed upstream as a pull request. Small fixes that upstream could take are tracked as [issues labeled "upstream candidate"](https://github.com/alvesmaicon/luanti/issues?q=label%3A%22upstream+candidate%22).
+
+### Results on the handheld
+
+All runs use viewing range 320 and Minetest Game. Each pair uses the same world and pose.
+
+| Scene | Without | With | What made the difference |
+| --- | --- | --- | --- |
+| Forest, 320x240 | 3.9 FPS, 1.64 M vertices | 28 FPS | Opaque cubes occlude, 1-mapblock meshes, leaves drawn as cubes ([#8](https://github.com/alvesmaicon/luanti/issues/8)) |
+| Lake view, 320x240 | 3.4 FPS, 1.52 M vertices, 1,319 draw calls. 11 MB of RAM free, 54 MB in swap | 10 FPS, 0.53 M vertices, 560 draw calls. 177 MB free, no swap | Simplified meshes past 208 nodes |
+| Lake view, 640x480 | | 10.5-11 FPS, 0.38 M vertices, 167 MB free | This branch's defaults (simplified past 160 nodes) |
+| Forest, 640x480 | | 20 FPS | |
+
+![The handheld at the lake, 320x240: simplified far meshes off and on](doc/handheld/lake.png)
+
+*The handheld at the lake (320x240, scaled up). Left: simplified far meshes off, 3.4 FPS. Right: on, 10 FPS. The far shore looks the same.*
+
+![Two moments of the same walk, without and with simplified far meshes](doc/handheld/walk.png)
+
+*A desktop build on Mesa llvmpipe (software rendering), two moments of the same walk. Left: without simplified far meshes, 11 FPS. Right: with them, 22-25 FPS.*
+
+![Fog before and after the mediump fix](doc/handheld/fog.png)
+
+*The Mali-400's fragment shaders only have fp16. Before the fog fix (left), the fog overflowed past 25.6 nodes and painted everything farther away in the sky's color, so a mountain looked like a smooth dome. After it (right), mountains show their real, jagged outline.*
+
+### What changed
+
+| Change | Setting (default here) |
+| --- | --- |
+| On KMSDRM with no cursor plane, the gamepad drives a drawn cursor in menus | |
+| GLES 2.0: 2D batches drawn with `glDrawElements`, so menus have text ([#2](https://github.com/alvesmaicon/luanti/issues/2)) | |
+| Text converted with UCS-4, which minimal glibc builds have built in ([#3](https://github.com/alvesmaicon/luanti/issues/3)) | |
+| Fixed-size formspecs fit screens under 800x600 ([#4](https://github.com/alvesmaicon/luanti/issues/4)) | |
+| Index buffers created on `GL_ELEMENT_ARRAY_BUFFER`, so lima caches their index range ([#5](https://github.com/alvesmaicon/luanti/issues/5)) | |
+| Fog without overflow on mediump-only GPUs ([#6](https://github.com/alvesmaicon/luanti/issues/6)) | |
+| Per-vertex fog in the nodes shader ([#1](https://github.com/alvesmaicon/luanti/issues/1)) | |
+| Nodes drawn as opaque cubes occlude (leaves with `leaves_style = opaque`) | |
+| Blocks out of view are unloaded too; blocks are kept alive even below 5 FPS ([#7](https://github.com/alvesmaicon/luanti/issues/7)) | `client_unload_out_of_view` (true), `client_unload_unused_data_timeout` (120) |
+| Far regions of 2x2x2 mapblocks are drawn from one simplified mesh (one cube per 2x2x2 nodes, equal faces merged), with no detail meshes far away | `client_lod_distance` (160, 0 turns it off) |
+
+Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
+
+### Settings for weak GPUs
+
+What the handheld uses on top of the defaults:
+
+```
+viewing_range = 320
+fov = 60
+leaves_style = opaque
+translucent_liquids = false
+enable_dynamic_shadows = false
+enable_post_processing = false
+enable_3d_clouds = false
+client_mesh_chunk = 1        # simplified meshes need 1 or 2
+undersampling = 1            # 2 halves the resolution: faster, blurrier
+```
+
+### Building
+
+The same as upstream: see [doc/compiling](doc/compiling/). goodluckOS builds it for the handheld with Buildroot, applying this branch's commits as patches.
+
+---
+
 Luanti is a free open-source voxel game engine with easy modding and game creation.
 
 Copyright (C) 2010-2026 Perttu Ahola <celeron55@gmail.com>
