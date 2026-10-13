@@ -5,6 +5,8 @@ uniform vec3 dayLight;
 // The cameraOffset is the current center of the visible world.
 uniform highp vec3 cameraOffset;
 uniform float animationTimer;
+uniform float fogDistance;
+uniform float fogShadingParameter;
 
 VARYING_ vec3 vNormal;
 // World position in the visible world (i.e. relative to the cameraOffset.)
@@ -214,7 +216,8 @@ void main(void)
 	nightRatio = 1.0 - color.a;
 	color.rgb = color.rgb * (color.a * dayLight.rgb +
 		nightRatio * artificialLight.rgb) * 2.0;
-	color.a = 1.0;
+	// fog clarity rides in the alpha: fp32 here, the fragment stage may be fp16
+	color.a = fogShadingParameter - fogShadingParameter * length(eyeVec) / fogDistance;
 
 	// Emphase blue a bit in darker places
 	// See C++ implementation in mapblock_mesh.cpp final_color_blend()
