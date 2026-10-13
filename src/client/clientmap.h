@@ -186,4 +186,5 @@ private:
 
 	bool m_loops_occlusion_culler;
 	bool m_enable_raytraced_culling;
+	bool m_cache_unload_out_of_view;
 };
