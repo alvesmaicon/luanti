@@ -2119,6 +2119,11 @@ texture_min_size (Base texture size) int 192 192 16384
 #    Systems with a low-end GPU (or no GPU) would benefit from smaller values.
 client_mesh_chunk (Client Mesh Chunksize) int 1 1 16
 
+#    Distance in nodes beyond which regions of 2x2x2 map blocks are drawn from a
+#    simplified mesh, with one cube per 2x2x2 nodes. Saves vertices and memory
+#    in long views. Needs a mesh chunksize of 1 or 2. 0 disables it.
+client_lod_distance (Simplified mesh distance) [client] int 0 0 1000
+
 #    Decide the color depth of the texture used for the post-processing pipeline.
 #    Reducing this can improve performance, but some effects (e.g. debanding)
 #    require more than 8 bits to work.

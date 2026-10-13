@@ -302,6 +302,8 @@ public:
 	// Including blocks at appropriate edges
 	void addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server=false, bool urgent=false);
 	void addUpdateMeshTaskForNode(v3s16 nodepos, bool ack_to_server=false, bool urgent=false);
+	// Simplified mesh of the region of 2x2x2 blocks holding blockpos (client_lod_distance)
+	void addUpdateLodMeshTask(v3s16 blockpos);
 
 	bool hasClientEvents() const { return !m_client_event_queue.empty(); }
 	// Get event from queue. If queue is empty, it triggers an assertion failure.

@@ -6,6 +6,8 @@
 #include "client.h"
 #include "client/mesh.h"
 #include "mapblock_mesh.h"
+#include "meshgen/lod.h"
+#include "porting.h"
 #include <IMaterialRenderer.h>
 #include <ISceneManager.h>
 #include <IVideoDriver.h>
@@ -155,6 +157,8 @@ static const std::string ClientMap_settings[] = {
 	"occlusion_culler",
 	"enable_raytraced_culling",
 	"client_unload_out_of_view",
+	"client_lod_distance",
+	"client_unload_unused_data_timeout",
 };
 
 ClientMap::ClientMap(
@@ -204,6 +208,10 @@ void ClientMap::onSettingChanged(std::string_view name, bool all)
 		m_enable_raytraced_culling = g_settings->getBool("enable_raytraced_culling");
 	if (all || name == "client_unload_out_of_view")
 		m_cache_unload_out_of_view = g_settings->getBool("client_unload_out_of_view");
+	if (all || name == "client_lod_distance")
+		m_cache_lod_distance = g_settings->getFloat("client_lod_distance");
+	if (all || name == "client_unload_unused_data_timeout")
+		m_cache_unload_timeout = g_settings->getFloat("client_unload_unused_data_timeout");
 }
 
 ClientMap::~ClientMap()
@@ -375,7 +383,92 @@ void ClientMap::clearDrawList()
 		block->refDrop();
 	m_keeplist.clear();
 
+	m_lod_drawlist.clear();
+
 	m_needs_update_drawlist = true;
+}
+
+static const v3s16 lod_face_dirs[6] = {
+	v3s16(0, 1, 0), v3s16(0, -1, 0), v3s16(1, 0, 0),
+	v3s16(-1, 0, 0), v3s16(0, 0, 1), v3s16(0, 0, -1),
+};
+
+bool ClientMap::useLod(v3s16 region_pos, u64 now_ms)
+{
+	constexpr s16 R = LodMeshGenerator::REGION;
+	const v3f center = intToFloat(region_pos * MAP_BLOCKSIZE, BS) +
+			v3f((R * MAP_BLOCKSIZE * 0.5f - 0.5f) * BS);
+	const bool far = center.getDistanceFrom(m_camera_position) > m_cache_lod_distance * BS;
+	auto it = m_lod_regions.find(region_pos);
+	if (!far) {
+		if (it != m_lod_regions.end()) {
+			it->second.lod = false;
+			it->second.drawlist_id = m_drawlist_id;
+		}
+		return false;
+	}
+
+	LodRegion &region = it != m_lod_regions.end() ? it->second : m_lod_regions[region_pos];
+	if (region.drawlist_id == m_drawlist_id)
+		return region.lod;
+	region.drawlist_id = m_drawlist_id;
+	region.used_ms = now_ms;
+
+	// A lost update (queues cleared) is asked again
+	if (region.queued && now_ms > region.queued_ms + 30000)
+		region.queued = false;
+	// A changed region keeps its mesh a while, so that arriving blocks don't remesh it each time
+	if (!region.queued && (!region.has_mesh ||
+			(region.dirty && now_ms >= region.queued_ms + 2000))) {
+		region.queued = true;
+		region.dirty = false;
+		region.queued_ms = now_ms;
+		m_client->addUpdateLodMeshTask(region_pos);
+	}
+	region.lod = region.has_mesh;
+	return region.lod;
+}
+
+void ClientMap::dropLodMeshes(LodRegion &region)
+{
+	if (region.mesh)
+		invalidateMapBlockMesh(region.mesh.get());
+	region.mesh.reset();
+	for (auto &skirt : region.skirts) {
+		if (skirt)
+			invalidateMapBlockMesh(skirt.get());
+		skirt.reset();
+	}
+}
+
+void ClientMap::setLodMesh(v3s16 region_pos, std::unique_ptr<MapBlockMesh> mesh,
+		std::unique_ptr<MapBlockMesh> (&skirts)[6])
+{
+	LodRegion &region = m_lod_regions[region_pos];
+	dropLodMeshes(region);
+	region.mesh = std::move(mesh);
+	for (int i = 0; i < 6; i++)
+		region.skirts[i] = std::move(skirts[i]);
+	region.has_mesh = true;
+	region.queued = false;
+}
+
+void ClientMap::markLodDirty(v3s16 blockpos)
+{
+	if (m_lod_regions.empty())
+		return;
+	constexpr s16 R = LodMeshGenerator::REGION;
+	// Cells on a region's side look into the next block
+	const v3s16 from = getContainerPos(blockpos - v3s16(1), R) * R;
+	const v3s16 to = getContainerPos(blockpos + v3s16(1), R) * R;
+	v3s16 p;
+	for (p.Z = from.Z; p.Z <= to.Z; p.Z += R)
+	for (p.Y = from.Y; p.Y <= to.Y; p.Y += R)
+	for (p.X = from.X; p.X <= to.X; p.X += R) {
+		auto it = m_lod_regions.find(p);
+		if (it != m_lod_regions.end())
+			it->second.dirty = true;
+	}
 }
 
 void ClientMap::updateDrawList()
@@ -408,6 +501,13 @@ void ClientMap::updateDrawList()
 		if (n.getContent() == CONTENT_IGNORE || m_nodedef->get(n).visuals->solidness == 2)
 			occlusion_culling_enabled = false;
 	}
+
+	// Far regions drawn from simplified meshes, when mesh cells fit in a region
+	constexpr s16 lod_region = LodMeshGenerator::REGION;
+	const bool lod_enabled = m_cache_lod_distance > 0 && lod_region % mesh_grid.cell_size == 0;
+	const u64 now_ms = porting::getTimeMs();
+	std::set<v3s16> lod_regions;
+	m_drawlist_id++;
 
 	const v3s16 camera_block = getContainerPos(cam_pos_nodes, MAP_BLOCKSIZE);
 	assert(m_drawlist.empty());
@@ -615,7 +715,10 @@ void ClientMap::updateDrawList()
 
 			// Note that we don't fill m_keeplist, or call resetUsageTimer() here.
 			// touchMapBlocks() exists to deal with that.
-			if (mesh) {
+			const v3s16 region_pos = getContainerPos(block_coord, lod_region) * lod_region;
+			if (lod_enabled && block && useLod(region_pos, now_ms)) {
+				lod_regions.insert(region_pos);
+			} else if (mesh) {
 				add_to_drawlist(block);
 			}
 
@@ -729,9 +832,36 @@ void ClientMap::updateDrawList()
 			add_to_drawlist(block);
 	}
 
+	// Skirts close a region's sides toward neighbours that show detail
+	for (v3s16 region_pos : lod_regions) {
+		u8 skirts = 0;
+		for (u8 face = 0; face < 6; face++) {
+			auto it = m_lod_regions.find(region_pos + lod_face_dirs[face] * lod_region);
+			if (it == m_lod_regions.end() || !it->second.lod ||
+					it->second.drawlist_id != m_drawlist_id)
+				skirts |= 1 << face;
+		}
+		m_lod_drawlist.emplace_back(region_pos, skirts);
+	}
+
+	if (now_ms >= m_lod_expire_ms) {
+		m_lod_expire_ms = now_ms + 5000;
+		const u64 keep_ms = std::max(10.0f, m_cache_unload_timeout) * 1000;
+		for (auto it = m_lod_regions.begin(); it != m_lod_regions.end(); ) {
+			if (!it->second.queued && now_ms > it->second.used_ms + keep_ms) {
+				dropLodMeshes(it->second);
+				it = m_lod_regions.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
 	g_profiler->avg("MapBlocks occlusion culled [#]", blocks_occlusion_culled);
 	g_profiler->avg("MapBlocks frustum culled [#]", blocks_frustum_culled);
 	g_profiler->avg("MapBlocks drawn [#]", m_drawlist.size());
+	g_profiler->avg("LOD regions drawn [#]", m_lod_drawlist.size());
+	g_profiler->avg("LOD regions held [#]", m_lod_regions.size());
 }
 
 void ClientMap::touchMapBlocks()
@@ -1046,6 +1176,42 @@ void ClientMap::renderMap(video::IVideoDriver* driver, s32 pass)
 	draw_order.clear();
 
 	auto is_frustum_culled = m_client->getCamera()->getFrustumCuller();
+
+	// Simplified far regions first: transparent buffers are drawn far to near
+	for (auto &[region_pos, skirts] : m_lod_drawlist) {
+		auto it = m_lod_regions.find(region_pos);
+		if (it == m_lod_regions.end())
+			continue;
+		LodRegion &region = it->second;
+		for (int i = -1; i < 6; i++) {
+			MapBlockMesh *mesh = i < 0 ? region.mesh.get() :
+					(skirts & (1 << i)) ? region.skirts[i].get() : nullptr;
+			if (!mesh)
+				continue;
+			v3f mesh_sphere_center = intToFloat(region_pos * MAP_BLOCKSIZE, BS)
+					+ mesh->getBoundingSphereCenter();
+			if (is_frustum_culled(mesh_sphere_center, mesh->getBoundingRadius()))
+				continue;
+
+			if (pass == scene::ESNRP_SOLID) {
+				if (mesh->isAnimationForced() ||
+						mesh_animate_count < (m_control.range_all ? 200 : 50)) {
+					if (mesh->animate(true, animation_time, crack, daynight_ratio))
+						mesh_animate_count++;
+				} else {
+					mesh->decreaseAnimationForceTimer();
+				}
+			}
+
+			if (is_transparent_pass) {
+				mesh->consolidateTransparentBuffers();
+				for (auto &buffer : mesh->getTransparentBuffers())
+					draw_order.emplace_back(get_block_wpos(region_pos), &buffer);
+			} else {
+				grouped_buffers.addFromBlock(region_pos, mesh, driver);
+			}
+		}
+	}
 
 	for (auto &i : m_drawlist) {
 		const v3s16 block_pos = i.first;

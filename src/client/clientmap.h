@@ -8,7 +8,9 @@
 #include "map.h"
 #include <ISceneNode.h>
 #include <map>
+#include <memory>
 #include <functional>
+#include <unordered_map>
 
 struct MapDrawControl
 {
@@ -24,6 +26,7 @@ struct MapDrawControl
 
 class Client;
 class RenderingEngine;
+class MapBlockMesh;
 
 enum CameraMode : int;
 
@@ -117,6 +120,12 @@ public:
 
 	void invalidateMapBlockMesh(MapBlockMesh *mesh);
 
+	// Simplified mesh of the region of 2x2x2 blocks at region_pos (client_lod_distance)
+	void setLodMesh(v3s16 region_pos, std::unique_ptr<MapBlockMesh> mesh,
+			std::unique_ptr<MapBlockMesh> (&skirts)[6]);
+	// The block's data changed: regions that use it need a new simplified mesh
+	void markLodDirty(v3s16 blockpos);
+
 	// For debug printing
 	void PrintInfo(std::ostream &out) override;
 
@@ -134,6 +143,25 @@ protected:
 	bool isOccluder(const MapNode &n) const override;
 private:
 	bool isMeshOccluded(MapBlock *mesh_block, u16 mesh_size, v3s16 cam_pos_nodes);
+
+	struct LodRegion
+	{
+		std::unique_ptr<MapBlockMesh> mesh;
+		// faces on each side toward solid cells, drawn while that neighbour shows detail
+		std::unique_ptr<MapBlockMesh> skirts[6];
+		bool has_mesh = false;
+		bool dirty = false;
+		bool queued = false;
+		// drawn from the simplified mesh in the current draw list
+		bool lod = false;
+		u32 drawlist_id = 0;
+		u64 queued_ms = 0;
+		u64 used_ms = 0;
+	};
+
+	// Whether the region holding a block is drawn from its simplified mesh
+	bool useLod(v3s16 region_pos, u64 now_ms);
+	void dropLodMeshes(LodRegion &region);
 
 	// update the vertex order in transparent mesh buffers
 	void updateTransparentMeshBuffers();
@@ -176,6 +204,11 @@ private:
 	std::vector<MapBlock*> m_keeplist;
 	std::map<v3s16, MapBlock*> m_drawlist_shadow;
 	bool m_needs_update_drawlist;
+	std::unordered_map<v3s16, LodRegion> m_lod_regions;
+	// regions drawn from their simplified mesh, with the skirts to draw (bits +Y -Y +X -X +Z -Z)
+	std::vector<std::pair<v3s16, u8>> m_lod_drawlist;
+	u32 m_drawlist_id = 0;
+	u64 m_lod_expire_ms = 0;
 	CachedMeshBuffers m_dynamic_buffers;
 
 	bool m_cache_trilinear_filter;
@@ -187,4 +220,6 @@ private:
 	bool m_loops_occlusion_culler;
 	bool m_enable_raytraced_culling;
 	bool m_cache_unload_out_of_view;
+	f32 m_cache_lod_distance;
+	f32 m_cache_unload_timeout;
 };

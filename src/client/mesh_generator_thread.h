@@ -65,7 +65,8 @@ class MeshUpdateQueue
 	};
 
 public:
-	MeshUpdateQueue(Client *client);
+	/// @param lod queue of simplified meshes of 2x2x2 block regions (meshgen/lod.h)
+	MeshUpdateQueue(Client *client, bool lod = false);
 
 	~MeshUpdateQueue();
 
@@ -98,6 +99,7 @@ public:
 
 private:
 	Client *m_client;
+	bool m_lod;
 	std::vector<QueuedMeshUpdate *> m_queue;
 	std::unordered_set<v3s16> m_urgents;
 	std::unordered_set<v3s16> m_inflight_blocks;
@@ -115,6 +117,9 @@ struct MeshUpdateResult
 {
 	v3s16 p = v3s16(-1338, -1338, -1338);
 	std::unique_ptr<MapBlockMesh> mesh;
+	// a simplified mesh of the region at p, with its skirts (meshgen/lod.h)
+	bool lod = false;
+	std::unique_ptr<MapBlockMesh> skirts[6];
 	u8 solid_sides;
 	std::vector<v3s16> ack_list;
 	bool urgent = false;
@@ -128,7 +133,8 @@ class MeshUpdateManager;
 class MeshUpdateWorkerThread : public UpdateThread
 {
 public:
-	MeshUpdateWorkerThread(Client *client, MeshUpdateQueue *queue_in, MeshUpdateManager *manager);
+	MeshUpdateWorkerThread(Client *client, MeshUpdateQueue *queue_in,
+			MeshUpdateQueue *lod_queue_in, MeshUpdateManager *manager);
 
 protected:
 	virtual void doUpdate();
@@ -136,6 +142,7 @@ protected:
 private:
 	Client *m_client;
 	MeshUpdateQueue *m_queue_in;
+	MeshUpdateQueue *m_lod_queue_in;
 	MeshUpdateManager *m_manager;
 
 	// TODO: Add callback to update these when g_settings changes
@@ -151,6 +158,9 @@ public:
 	// update for the block at p
 	void updateBlock(Map *map, v3s16 p, bool ack_block_to_server, bool urgent,
 			bool update_neighbors = false);
+
+	// Queues a simplified mesh of the region holding block p
+	void updateLod(Map *map, v3s16 p);
 
 	void putResult(MeshUpdateResult &&r);
 
@@ -172,6 +182,7 @@ private:
 	void deferUpdate();
 
 	MeshUpdateQueue m_queue_in;
+	MeshUpdateQueue m_lod_queue_in;
 	ResultQueue m_queue_out;
 	ResultQueue m_queue_out_urgent;
 

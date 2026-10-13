@@ -8,6 +8,8 @@
 #include "client.h"
 #include "mapblock.h"
 #include "mapblock_mesh.h"
+#include "meshgen/collector.h"
+#include "meshgen/lod.h"
 #include "map.h"
 #include "util/directiontables.h"
 #include "porting.h"
@@ -86,8 +88,9 @@ namespace {
 	MeshUpdateQueue
 */
 
-MeshUpdateQueue::MeshUpdateQueue(Client *client):
-	m_client(client)
+MeshUpdateQueue::MeshUpdateQueue(Client *client, bool lod):
+	m_client(client),
+	m_lod(lod)
 {
 	m_cache_smooth_lighting = g_settings->getBool("smooth_lighting");
 	m_cache_enable_water_reflections = g_settings->getBool("enable_water_reflections");
@@ -103,10 +106,10 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
 	bool urgent, bool from_neighbor)
 {
 	// If block that causes update does not exist, skip.
-	if (!map->getBlockNoCreateNoEx(p))
+	if (!m_lod && !map->getBlockNoCreateNoEx(p))
 		return false;
 
-	const MeshGrid mesh_grid = m_client->getMeshGrid();
+	const MeshGrid mesh_grid = m_lod ? MeshGrid{LodMeshGenerator::REGION} : m_client->getMeshGrid();
 
 	// Mesh is placed at the corner block of a chunk
 	// (where all coordinate are divisible by the chunk size)
@@ -223,7 +226,7 @@ void MeshUpdateQueue::clear(bool finish)
 
 void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
 {
-	auto mesh_grid = m_client->getMeshGrid();
+	auto mesh_grid = m_lod ? MeshGrid{LodMeshGenerator::REGION} : m_client->getMeshGrid();
 	MeshMakeData *data = new MeshMakeData(m_client->ndef(),
 			MAP_BLOCKSIZE * mesh_grid.cell_size, mesh_grid);
 	q->data = data;
@@ -236,8 +239,10 @@ void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
 			block->copyTo(data->m_vmanip);
 	}
 
-	data->setCrack(q->crack_level, q->crack_pos);
-	data->m_generate_minimap = !!m_client->getMinimap();
+	data->m_lod = m_lod;
+	if (!m_lod)
+		data->setCrack(q->crack_level, q->crack_pos);
+	data->m_generate_minimap = !m_lod && m_client->getMinimap();
 	data->m_smooth_lighting = m_cache_smooth_lighting;
 	data->m_enable_water_reflections = m_cache_enable_water_reflections;
 	data->m_enable_waving_water = m_cache_enable_waving_water;
@@ -247,32 +252,66 @@ void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
 	MeshUpdateWorkerThread
 */
 
-MeshUpdateWorkerThread::MeshUpdateWorkerThread(Client *client, MeshUpdateQueue *queue_in, MeshUpdateManager *manager) :
-		UpdateThread("Mesh"), m_client(client), m_queue_in(queue_in), m_manager(manager)
+MeshUpdateWorkerThread::MeshUpdateWorkerThread(Client *client, MeshUpdateQueue *queue_in,
+		MeshUpdateQueue *lod_queue_in, MeshUpdateManager *manager) :
+		UpdateThread("Mesh"), m_client(client), m_queue_in(queue_in),
+		m_lod_queue_in(lod_queue_in), m_manager(manager)
 {
 	m_generation_interval = g_settings->getU16("mesh_generation_interval");
 	m_generation_interval = rangelim(m_generation_interval, 0, 25);
 }
 
+static bool is_empty(const MeshCollector &collector)
+{
+	for (auto &buffers : collector.prebuffers) {
+		if (!buffers.empty())
+			return false;
+	}
+	return true;
+}
+
 void MeshUpdateWorkerThread::doUpdate()
 {
-	QueuedMeshUpdate *q;
-	while ((q = m_queue_in->pop())) {
-		ScopeProfiler sp(g_profiler, "Client: Mesh making (sum)");
+	for (;;) {
+		// Simplified meshes wait for the detailed ones
+		MeshUpdateQueue *queue = m_queue_in;
+		QueuedMeshUpdate *q = queue->pop();
+		if (!q) {
+			queue = m_lod_queue_in;
+			q = queue->pop();
+		}
+		if (!q)
+			break;
 
-		// This generates the mesh:
-		MapBlockMesh *mesh_new = new MapBlockMesh(m_client, q->data);
+		ScopeProfiler sp(g_profiler, "Client: Mesh making (sum)");
 
 		MeshUpdateResult r;
 		r.p = q->p;
-		r.mesh = std::unique_ptr<MapBlockMesh>(mesh_new);
-		r.solid_sides = get_solid_sides(q->data);
+		if (q->data->m_lod) {
+			const u16 side = q->data->m_side_length;
+			std::vector<MeshCollector> collectors;
+			for (int i = 0; i < 7; i++)
+				collectors.emplace_back(v3f((side * 0.5f - 0.5f) * BS));
+			LodMeshGenerator(q->data).generate(collectors);
+			r.lod = true;
+			if (!is_empty(collectors[0]))
+				r.mesh = std::make_unique<MapBlockMesh>(m_client, collectors[0], side);
+			for (int i = 0; i < 6; i++) {
+				if (!is_empty(collectors[1 + i]))
+					r.skirts[i] = std::make_unique<MapBlockMesh>(m_client, collectors[1 + i], side);
+			}
+			r.solid_sides = 0;
+		} else {
+			// This generates the mesh:
+			r.mesh = std::make_unique<MapBlockMesh>(m_client, q->data);
+			r.solid_sides = get_solid_sides(q->data);
+		}
 		r.ack_list = std::move(q->ack_list);
 		r.urgent = q->urgent;
 		r.map_blocks = std::move(q->map_blocks);
 
 		m_manager->putResult(std::move(r));
-		m_queue_in->done(q->p);
+		queue->done(q->p);
 		delete q;
 		sp.stop();
 
@@ -290,7 +329,8 @@ void MeshUpdateWorkerThread::doUpdate()
 */
 
 MeshUpdateManager::MeshUpdateManager(Client *client):
-	m_queue_in(client)
+	m_queue_in(client),
+	m_lod_queue_in(client, true)
 {
 	int number_of_threads = rangelim(g_settings->getS32("mesh_generation_threads"), 0, 8);
 
@@ -303,7 +343,8 @@ MeshUpdateManager::MeshUpdateManager(Client *client):
 	infostream << "MeshUpdateManager: using " << number_of_threads << " threads" << std::endl;
 
 	for (int i = 0; i < number_of_threads; i++)
-		m_workers.push_back(std::make_unique<MeshUpdateWorkerThread>(client, &m_queue_in, this));
+		m_workers.push_back(std::make_unique<MeshUpdateWorkerThread>(client, &m_queue_in,
+				&m_lod_queue_in, this));
 }
 
 void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool ack_block_to_server,
@@ -326,6 +367,12 @@ void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool ack_block_to_server,
 				m_queue_in.addBlock(map, p + dp, false, urgent, true);
 		}
 	}
+	deferUpdate();
+}
+
+void MeshUpdateManager::updateLod(Map *map, v3s16 p)
+{
+	m_lod_queue_in.addBlock(map, p, false, false, false);
 	deferUpdate();
 }
 
@@ -355,6 +402,7 @@ bool MeshUpdateManager::getNextResult(MeshUpdateResult &r)
 void MeshUpdateManager::clearAllQueues(bool finish)
 {
 	m_queue_in.clear(finish);
+	m_lod_queue_in.clear(finish);
 
 	const auto &drop_result = [] (MeshUpdateResult &r) {
 		for (auto *block : r.map_blocks)
