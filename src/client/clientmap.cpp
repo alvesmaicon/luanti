@@ -154,6 +154,7 @@ static const std::string ClientMap_settings[] = {
 	"transparency_sorting_distance",
 	"occlusion_culler",
 	"enable_raytraced_culling",
+	"client_unload_out_of_view",
 };
 
 ClientMap::ClientMap(
@@ -201,6 +202,8 @@ void ClientMap::onSettingChanged(std::string_view name, bool all)
 		m_loops_occlusion_culler = g_settings->get("occlusion_culler") == "loops";
 	if (all || name == "enable_raytraced_culling")
 		m_enable_raytraced_culling = g_settings->getBool("enable_raytraced_culling");
+	if (all || name == "client_unload_out_of_view")
+		m_cache_unload_out_of_view = g_settings->getBool("client_unload_out_of_view");
 }
 
 ClientMap::~ClientMap()
@@ -768,6 +771,10 @@ void ClientMap::touchMapBlocks()
 	// Number of blocks in rendering range
 	u32 blocks_in_range = 0;
 
+	// client_unload_out_of_view: what is near or within the view cone plus a margin
+	const f32 keep_near = 3 * MAP_BLOCKSIZE * BS;
+	const f32 keep_half_angle = m_camera_fov / 2 + 20.0f * core::DEGTORAD;
+
 	for (const auto &sector_it : m_sectors) {
 		const MapSector *sector = sector_it.second;
 		v2s16 sp = sector->getPos();
@@ -808,9 +815,21 @@ void ClientMap::touchMapBlocks()
 					m_control.wanted_range * BS + mesh_sphere_radius)
 				continue; // Out of range, skip.
 
+			blocks_in_range++;
+
+			if (m_cache_unload_out_of_view) {
+				// Out of view: let it expire like a block out of range
+				v3f to_block = mesh_sphere_center - m_camera_position;
+				f32 dist = to_block.getLength();
+				f32 angle = keep_half_angle + std::asin(std::min(1.0f,
+						mesh_sphere_radius / std::max(dist, 1.0f)));
+				if (dist > keep_near && angle < core::PI &&
+						to_block.dotProduct(m_camera_direction) < dist * std::cos(angle))
+					continue;
+			}
+
 			// Keep the block alive as long as it is in range.
 			block->resetUsageTimer();
-			blocks_in_range++;
 		}
 	}
 

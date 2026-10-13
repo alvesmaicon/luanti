@@ -2240,6 +2240,11 @@ max_out_chat_queue_size (Maximum size of the client's outgoing chat queue) [clie
 #    Timeout for client to remove unused map data from memory, in seconds.
 client_unload_unused_data_timeout (Mapblock unload timeout) [client] float 600.0 0.0
 
+#    Also unload, after the timeout above, blocks in range that are out of view:
+#    far behind or beside the camera. Saves memory while moving; turning back
+#    shows those blocks loading again.
+client_unload_out_of_view (Unload blocks out of view) [client] bool false
+
 #    Maximum number of mapblocks for client to be kept in memory.
 #    Note that there is an internal dynamic minimum number of blocks that
 #    won't be deleted, depending on the current view range.

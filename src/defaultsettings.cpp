@@ -113,6 +113,7 @@ void set_default_settings()
 	settings->setDefault("screenshot_format", "png");
 	settings->setDefault("screenshot_quality", "0");
 	settings->setDefault("client_unload_unused_data_timeout", "600");
+	settings->setDefault("client_unload_out_of_view", "false");
 	settings->setDefault("client_mapblock_limit", "9300"); // about 145 MB
 	settings->setDefault("enable_build_where_you_stand", "false");
 	settings->setDefault("curl_timeout", "20000");
