@@ -508,6 +508,8 @@ private:
 
 
 	std::unique_ptr<MeshUpdateManager> m_mesh_update_manager;
+	// received far away, with no detail mesh to wait for (client_lod_distance)
+	std::vector<v3s16> m_far_blocks_to_ack;
 	ClientEnvironment m_env;
 	std::unique_ptr<ParticleManager> m_particle_manager;
 	std::unique_ptr<con::IConnection> m_con;

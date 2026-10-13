@@ -141,6 +141,7 @@ LodMeshGenerator::Cell LodMeshGenerator::classify(v3s16 c)
 	} else if (n_liquid) {
 		cell.kind = LIQUID;
 		cell.side = cell.top = most_common(liquid, n_liquid);
+		cell.opaque = m_ndef->get(cell.side).alpha == ALPHAMODE_OPAQUE;
 	} else {
 		cell.kind = AIR;
 	}
@@ -177,28 +178,34 @@ u16 LodMeshGenerator::faceLight(v3s16 c, u8 face)
 	return decode_light(day) | (decode_light(night) << 8);
 }
 
-void LodMeshGenerator::drawFace(v3s16 c, u8 face, const Cell &cell, MeshCollector &out)
+static bool is_tileable(const TileSpec &tile)
 {
-	const MapNode &n = face == 0 ? cell.top : cell.side;
-	const ContentFeatures &f = m_ndef->get(n);
+	constexpr u8 both = MATERIAL_FLAG_TILEABLE_HORIZONTAL | MATERIAL_FLAG_TILEABLE_VERTICAL;
+	return (tile.layers[0].material_flags & both) == both;
+}
+
+void LodMeshGenerator::drawQuad(u8 face, v3s16 c0, v3s16 c1, s16 w, s16 h, const Face &f,
+		MeshCollector &out)
+{
+	const ContentFeatures &cf = m_ndef->get(f.node);
 	TileSpec tile;
-	getNodeTile(n, c * CELL, face_dirs[face], m_data, tile);
-	if (cell.kind == SOLID) {
+	getNodeTile(f.node, c0 * CELL, face_dirs[face], m_data, tile);
+	if (f.kind == SOLID) {
 		for (auto &layer : tile.layers)
 			layer.material_flags |= MATERIAL_FLAG_BACKFACE_CULLING;
 	}
 
 	const v3f normal = v3f::from(face_dirs[face]);
-	video::SColor color = encode_light(faceLight(c, face), f.light_source);
-	if (!f.light_source)
+	video::SColor color = encode_light(f.light, cf.light_source);
+	if (!cf.light_source)
 		applyFacesShading(color, normal);
 
-	const v3f min = intToFloat(c * CELL, BS) - v3f(0.5f * BS);
-	const v3f max = min + v3f(CELL * BS);
-	// Textures repeat once per node where they tile
-	const u8 flags = tile.layers[0].material_flags;
-	const f32 su = (flags & MATERIAL_FLAG_TILEABLE_HORIZONTAL) ? CELL : 1;
-	const f32 sv = (flags & MATERIAL_FLAG_TILEABLE_VERTICAL) ? CELL : 1;
+	const v3f min = intToFloat(c0 * CELL, BS) - v3f(0.5f * BS);
+	const v3f max = intToFloat((c1 + v3s16(1)) * CELL, BS) - v3f(0.5f * BS);
+	// Textures repeat once per node where they tile, else stretch
+	const bool tileable = is_tileable(tile);
+	const f32 su = tileable ? w * CELL : 1;
+	const f32 sv = tileable ? h * CELL : 1;
 
 	video::S3DVertex v[4];
 	setup_face(v, face, min, max, su, sv, tile.rotation);
@@ -221,6 +228,12 @@ void LodMeshGenerator::generate(std::vector<MeshCollector> &out)
 	for (c.X = -1; c.X <= m_cells; c.X++)
 		at(c) = classify(c);
 
+	// The faces to draw, per direction and cell
+	const s32 volume = m_cells * m_cells * m_cells;
+	std::vector<Face> faces(6 * volume);
+	const auto face_at = [&] (u8 face, v3s16 c) -> Face & {
+		return faces[face * volume + (c.Z * m_cells + c.Y) * m_cells + c.X];
+	};
 	for (c.Z = 0; c.Z < m_cells; c.Z++)
 	for (c.Y = 0; c.Y < m_cells; c.Y++)
 	for (c.X = 0; c.X < m_cells; c.X++) {
@@ -230,20 +243,78 @@ void LodMeshGenerator::generate(std::vector<MeshCollector> &out)
 		for (u8 face = 0; face < 6; face++) {
 			const v3s16 c2 = c + face_dirs[face];
 			const Cell &other = at(c2);
-			MeshCollector *dst = &out[0];
-			if (other.kind == SOLID) {
-				if (cell.kind == LIQUID)
+			u8 dst = 0;
+			if (cell.kind == SOLID) {
+				if (other.kind == LIQUID && other.opaque)
 					continue;
-				const bool inside = c2.X >= 0 && c2.X < m_cells && c2.Y >= 0 &&
-						c2.Y < m_cells && c2.Z >= 0 && c2.Z < m_cells;
-				if (inside)
-					continue;
-				dst = &out[1 + face];
-			} else if (cell.kind == LIQUID && other.kind == LIQUID &&
-					other.side.getContent() == cell.side.getContent()) {
+				if (other.kind == SOLID) {
+					const bool inside = c2.X >= 0 && c2.X < m_cells && c2.Y >= 0 &&
+							c2.Y < m_cells && c2.Z >= 0 && c2.Z < m_cells;
+					if (inside)
+						continue;
+					dst = 1 + face;
+				}
+			} else if (other.kind == SOLID || (other.kind == LIQUID &&
+					other.side.getContent() == cell.side.getContent())) {
 				continue;
 			}
-			drawFace(c, face, cell, *dst);
+			Face &f = face_at(face, c);
+			f.dst = dst;
+			f.kind = cell.kind;
+			f.node = face == 0 ? cell.top : cell.side;
+			f.light = faceLight(c, face);
+		}
+	}
+
+	// Equal faces next to each other become one quad; axes: normal, u, v of setup_face()
+	static const u8 axes[6][3] = {
+		{1, 0, 2}, {1, 0, 2}, {0, 2, 1}, {0, 2, 1}, {2, 0, 1}, {2, 0, 1},
+	};
+	std::vector<bool> done(m_cells * m_cells);
+	for (u8 face = 0; face < 6; face++) {
+		const u8 an = axes[face][0], au = axes[face][1], av = axes[face][2];
+		const auto face_uv = [&] (s16 s, s16 u, s16 v) -> Face & {
+			v3s16 p;
+			p[an] = s;
+			p[au] = u;
+			p[av] = v;
+			return face_at(face, p);
+		};
+		for (s16 s = 0; s < m_cells; s++) {
+			std::fill(done.begin(), done.end(), false);
+			for (s16 v = 0; v < m_cells; v++)
+			for (s16 u = 0; u < m_cells; u++) {
+				const Face &f = face_uv(s, u, v);
+				if (done[v * m_cells + u] || f.dst == Face::NONE)
+					continue;
+				TileSpec tile;
+				getNodeTile(f.node, v3s16(0), face_dirs[face], m_data, tile);
+				s16 w = 1, h = 1;
+				if (is_tileable(tile)) {
+					while (u + w < m_cells && !done[v * m_cells + u + w] &&
+							face_uv(s, u + w, v) == f)
+						w++;
+					for (; v + h < m_cells; h++) {
+						bool same = true;
+						for (s16 i = 0; i < w && same; i++)
+							same = !done[(v + h) * m_cells + u + i] &&
+									face_uv(s, u + i, v + h) == f;
+						if (!same)
+							break;
+					}
+				}
+				for (s16 j = 0; j < h; j++)
+				for (s16 i = 0; i < w; i++)
+					done[(v + j) * m_cells + u + i] = true;
+
+				v3s16 c0, c1;
+				c0[an] = c1[an] = s;
+				c0[au] = u;
+				c0[av] = v;
+				c1[au] = u + w - 1;
+				c1[av] = v + h - 1;
+				drawQuad(face, c0, c1, w, h, f, out[f.dst]);
+			}
 		}
 	}
 }

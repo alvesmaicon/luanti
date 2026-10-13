@@ -388,17 +388,24 @@ void ClientMap::clearDrawList()
 	m_needs_update_drawlist = true;
 }
 
+// Detail meshes are made this many nodes before they are drawn
+static constexpr f32 LOD_DETAIL_MARGIN = 2 * MAP_BLOCKSIZE;
+
 static const v3s16 lod_face_dirs[6] = {
 	v3s16(0, 1, 0), v3s16(0, -1, 0), v3s16(1, 0, 0),
 	v3s16(-1, 0, 0), v3s16(0, 0, 1), v3s16(0, 0, -1),
 };
 
-bool ClientMap::useLod(v3s16 region_pos, u64 now_ms)
+f32 ClientMap::lodDistance(v3s16 region_pos) const
 {
 	constexpr s16 R = LodMeshGenerator::REGION;
 	const v3f center = intToFloat(region_pos * MAP_BLOCKSIZE, BS) +
 			v3f((R * MAP_BLOCKSIZE * 0.5f - 0.5f) * BS);
-	const bool far = center.getDistanceFrom(m_camera_position) > m_cache_lod_distance * BS;
+	return center.getDistanceFrom(m_camera_position);
+}
+
+bool ClientMap::useLod(v3s16 region_pos, bool far, u64 now_ms)
+{
 	auto it = m_lod_regions.find(region_pos);
 	if (!far) {
 		if (it != m_lod_regions.end()) {
@@ -439,6 +446,33 @@ void ClientMap::dropLodMeshes(LodRegion &region)
 			invalidateMapBlockMesh(skirt.get());
 		skirt.reset();
 	}
+}
+
+void ClientMap::dropDetailMesh(MapBlock *block)
+{
+	invalidateMapBlockMesh(block->mesh);
+	delete block->mesh;
+	block->mesh = nullptr;
+	block->lod_no_mesh = true;
+}
+
+bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
+{
+	constexpr s16 R = LodMeshGenerator::REGION;
+	// Only the BFS culler draws simplified meshes
+	if (m_cache_lod_distance <= 0 || m_control.range_all || m_loops_occlusion_culler ||
+			R % m_client->getMeshGrid().cell_size != 0)
+		return false;
+	if (lodDistance(getContainerPos(mesh_pos, R) * R) <=
+			(m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS)
+		return false;
+	MapBlock *block = getBlockNoCreateNoEx(mesh_pos);
+	if (!block)
+		return false;
+	if (block->mesh)
+		dropDetailMesh(block);
+	block->lod_no_mesh = true;
+	return true;
 }
 
 void ClientMap::setLodMesh(v3s16 region_pos, std::unique_ptr<MapBlockMesh> mesh,
@@ -565,6 +599,12 @@ void ClientMap::updateDrawList()
 
 				v3s16 block_pos = block->getPos();
 				v3s16 block_pos_nodes = block->getPosRelative();
+
+				// Left without a detail mesh while the BFS culler drew it simplified
+				if (block->lod_no_mesh) {
+					block->lod_no_mesh = false;
+					m_client->addUpdateMeshTask(block_pos);
+				}
 
 				if (mesh) {
 					mesh_sphere_center = intToFloat(block_pos_nodes, BS)
@@ -716,11 +756,23 @@ void ClientMap::updateDrawList()
 			// Note that we don't fill m_keeplist, or call resetUsageTimer() here.
 			// touchMapBlocks() exists to deal with that.
 			const v3s16 region_pos = getContainerPos(block_coord, lod_region) * lod_region;
-			if (lod_enabled && block && useLod(region_pos, now_ms)) {
-				lod_regions.insert(region_pos);
-			} else if (mesh) {
-				add_to_drawlist(block);
+			bool lod = false;
+			if (lod_enabled && block) {
+				const f32 d = lodDistance(region_pos);
+				const bool detail_wanted = d <= (m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS;
+				if (block->lod_no_mesh && detail_wanted) {
+					block->lod_no_mesh = false;
+					m_client->addUpdateMeshTask(block_coord);
+				}
+				lod = useLod(region_pos, d > m_cache_lod_distance * BS, now_ms);
+				// Far enough not to need its detail mesh soon
+				if (lod && mesh && !detail_wanted)
+					dropDetailMesh(block);
 			}
+			if (lod)
+				lod_regions.insert(region_pos);
+			else if (mesh)
+				add_to_drawlist(block);
 
 			// Decide which sides to traverse next or to block away
 

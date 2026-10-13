@@ -692,6 +692,12 @@ void Client::step(float dtime)
 				if (block)
 					block->refDrop();
 		}
+		for (size_t i = 0; i < m_far_blocks_to_ack.size(); i += 255) {
+			auto from = m_far_blocks_to_ack.begin() + i;
+			sendGotBlocks(std::vector<v3s16>(from,
+					from + std::min<size_t>(255, m_far_blocks_to_ack.size() - i)));
+		}
+		m_far_blocks_to_ack.clear();
 		if (blocks_to_ack.size() > 0) {
 				// Acknowledge block(s)
 				sendGotBlocks(blocks_to_ack);
@@ -1808,7 +1814,12 @@ void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
 
 void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server, bool urgent)
 {
-	m_env.getClientMap().markLodDirty(blockpos);
+	ClientMap &map = m_env.getClientMap();
+	map.markLodDirty(blockpos);
+	if (ack_to_server && map.skipDetailMesh(m_mesh_grid.getMeshPos(blockpos))) {
+		m_far_blocks_to_ack.push_back(blockpos);
+		ack_to_server = false;
+	}
 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, true);
 }
 

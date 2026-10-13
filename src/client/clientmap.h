@@ -125,6 +125,8 @@ public:
 			std::unique_ptr<MapBlockMesh> (&skirts)[6]);
 	// The block's data changed: regions that use it need a new simplified mesh
 	void markLodDirty(v3s16 blockpos);
+	// Whether the mesh at mesh_pos is far enough to be drawn simplified only
+	bool skipDetailMesh(v3s16 mesh_pos);
 
 	// For debug printing
 	void PrintInfo(std::ostream &out) override;
@@ -159,9 +161,12 @@ private:
 		u64 used_ms = 0;
 	};
 
-	// Whether the region holding a block is drawn from its simplified mesh
-	bool useLod(v3s16 region_pos, u64 now_ms);
+	// Distance from the camera to a region's center, in BS
+	f32 lodDistance(v3s16 region_pos) const;
+	// Whether a region is drawn from its simplified mesh
+	bool useLod(v3s16 region_pos, bool far, u64 now_ms);
 	void dropLodMeshes(LodRegion &region);
+	void dropDetailMesh(MapBlock *block);
 
 	// update the vertex order in transparent mesh buffers
 	void updateTransparentMeshBuffers();
