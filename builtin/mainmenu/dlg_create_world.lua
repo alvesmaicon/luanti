@@ -160,13 +160,16 @@ local function create_world_formspec(dialogdata)
 				fgettext("Allow changing the game mode"), tostring(dialogdata.mode_change))
 	end
 
-	-- a handheld can't type: the world takes the next free name and the game's mapgen
+	-- a handheld types the name with the gamepad's keyboard (left empty, the next free one), and keeps the
+	-- game's mapgen
 	if core.settings:get_bool("menu_handheld") then
 		dialogdata.mg = current_mg
-		return "size[7,3.2,true]" ..
-			game_mode(0.5, 0.4, 6) ..
-			"button[0.5,2.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
-			"button[3.5,2.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
+		return "size[7,4.2,true]" ..
+			"field[0.8,0.7;6,0.5;te_world_name;" .. fgettext("World name") .. ";" ..
+				core.formspec_escape(dialogdata.worldname) .. "]" ..
+			game_mode(0.5, 1.4, 6) ..
+			"button[0.5,3.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
+			"button[3.5,3.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
 	end
 
 	-- The logic of the flag element IDs is as follows:
