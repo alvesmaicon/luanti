@@ -87,17 +87,20 @@ return {
 			"style_type[label;valign=center;halign=center;font=mono,bold;font_size=*1.1]",
 			"label[0.1,4;5.4,0.6;",
 			core.formspec_escape(version.project .. " " .. version.string), "]",
-			"style_type[button_url;border=false;textcolor=#4cd9f9]",
-			"button_url[1.5,4.6;2.5,0.5;homepage;luanti.org;https://www.luanti.org/]"
 		}
 
-		if PLATFORM == "Android" then
-			fs[#fs+1] = "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
-		else
-			fs[#fs+1] = "tooltip[userdata;" ..
-					fgettext("Opens the directory that contains user-provided worlds, games, mods,\n" ..
-							"and texture packs in a file manager / explorer.") .. "]"
-			fs[#fs+1] = "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
+		-- a handheld has no browser, no network and no file manager
+		if not core.settings:get_bool("menu_handheld") then
+			fs[#fs+1] = "style_type[button_url;border=false;textcolor=#4cd9f9]"
+			fs[#fs+1] = "button_url[1.5,4.6;2.5,0.5;homepage;luanti.org;https://www.luanti.org/]"
+			if PLATFORM == "Android" then
+				fs[#fs+1] = "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
+			else
+				fs[#fs+1] = "tooltip[userdata;" ..
+						fgettext("Opens the directory that contains user-provided worlds, games, mods,\n" ..
+								"and texture packs in a file manager / explorer.") .. "]"
+				fs[#fs+1] = "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
+			end
 		end
 
 		local active_renderer_info = fgettext("Active renderer:") .. "\n" ..
