@@ -65,8 +65,10 @@ function singleplayer_refresh_gamebar()
 		old_bar:delete()
 	end
 
-	-- Hide gamebar if no games are installed
-	if #pkgmgr.games == 0 then
+	local handheld = core.settings:get_bool("menu_handheld")
+
+	-- Hide gamebar if no games are installed, and on a handheld when there is no other to pick
+	if #pkgmgr.games == 0 or handheld and #pkgmgr.games == 1 then
 		return false
 	end
 
@@ -114,8 +116,10 @@ function singleplayer_refresh_gamebar()
 		btnbar:add_button(btn_name, text, image, tooltip)
 	end
 
-	local plus_image = core.formspec_escape(defaulttexturedir .. "plus.png")
-	btnbar:add_button("game_open_cdb", "", plus_image, fgettext("Install games from ContentDB"))
+	if not handheld then
+		local plus_image = core.formspec_escape(defaulttexturedir .. "plus.png")
+		btnbar:add_button("game_open_cdb", "", plus_image, fgettext("Install games from ContentDB"))
+	end
 	return true
 end
 
@@ -206,7 +210,11 @@ local function get_formspec(tabview, name, tabdata)
 	end
 
 	retval = retval .. "container[5.25,4.875]"
-	if world then
+	-- a handheld only gets mods from ContentDB, which needs the network
+	if world and core.settings:get_bool("menu_handheld") then
+		retval = retval ..
+				"button[3.325,0;3.225,0.8;world_delete;".. fgettext("Delete") .. "]"
+	elseif world then
 		retval = retval ..
 				"button[0,0;3.225,0.8;world_delete;".. fgettext("Delete") .. "]" ..
 				"button[3.325,0;3.225,0.8;world_configure;".. fgettext("Select Mods") .. "]"

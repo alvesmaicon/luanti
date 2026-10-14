@@ -921,6 +921,11 @@ menu_clouds (Clouds in menu) bool true
 #    Choose theme colors for the main menu background.
 menu_theme (Menu theme) enum light dark,light
 
+#    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,
+#    nothing from ContentDB, no Select Mods, and a new world asks only for its game mode
+#    (it takes the next free name and the game's mapgen).
+menu_handheld (Handheld main menu) bool false
+
 [**HUD]
 
 #    Modifies the size of the HUD elements.

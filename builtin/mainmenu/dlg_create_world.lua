@@ -152,6 +152,23 @@ local function create_world_formspec(dialogdata)
 		mglist = mglist:sub(1, -2)
 	end
 
+	-- one button that shows the mode and switches it, as in Minecraft
+	local game_mode = function(x, y, w)
+		return ("button[%g,%g;%g,0.5;btn_game_mode;%s]"):format(x, y, w,
+				fgettext("Game mode: $1", fgettext_ne(dialogdata.creative and "Creative" or "Survival"))) ..
+			("checkbox[%g,%g;cb_mode_change;%s;%s]"):format(x, y + 0.7,
+				fgettext("Allow changing the game mode"), tostring(dialogdata.mode_change))
+	end
+
+	-- a handheld can't type: the world takes the next free name and the game's mapgen
+	if core.settings:get_bool("menu_handheld") then
+		dialogdata.mg = current_mg
+		return "size[7,3.2,true]" ..
+			game_mode(0.5, 0.4, 6) ..
+			"button[0.5,2.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
+			"button[3.5,2.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
+	end
+
 	-- The logic of the flag element IDs is as follows:
 	-- "flag_main_foo-bar-baz" controls dialogdata.flags["main"]["foo_bar_baz"]
 	-- see the buttonhandler for the implementation of this
@@ -293,11 +310,7 @@ local function create_world_formspec(dialogdata)
 	retval = retval ..
 		"label[0,2;" .. fgettext("Mapgen") .. "]"..
 		"dropdown[0,2.5;6.3;dd_mapgen;" .. mglist .. ";" .. selindex .. "]" ..
-		-- one button that shows the mode and switches it, as in Minecraft
-		"button[0,3.4;6,0.5;btn_game_mode;" ..
-			fgettext("Game mode: $1", fgettext_ne(dialogdata.creative and "Creative" or "Survival")) .. "]" ..
-		"checkbox[0,4.1;cb_mode_change;" .. fgettext("Allow changing the game mode") .. ";" ..
-			tostring(dialogdata.mode_change) .. "]"
+		game_mode(0, 3.4, 6)
 
 	-- Warning when making a devtest world
 	if game.id == "devtest" then
@@ -349,7 +362,7 @@ local function create_world_buttonhandler(this, fields)
 			this.parent.dlg_create_world_closed_at = core.get_us_time()
 		end
 
-		local worldname = fields["te_world_name"]
+		local worldname = fields["te_world_name"] or ""
 		local game, _ = pkgmgr.find_by_gameid(core.settings:get("menu_last_game"))
 
 		local message
@@ -379,7 +392,7 @@ local function create_world_buttonhandler(this, fields)
 
 		if message == nil then
 			this.data.seed = fields["te_seed"] or ""
-			this.data.mg = fields["dd_mapgen"]
+			this.data.mg = fields["dd_mapgen"] or this.data.mg
 
 			-- actual names as used by engine
 			local settings = {
@@ -418,7 +431,7 @@ local function create_world_buttonhandler(this, fields)
 		return true
 	end
 
-	this.data.worldname = fields["te_world_name"]
+	this.data.worldname = fields["te_world_name"] or ""
 	this.data.seed = fields["te_seed"] or ""
 
 	if fields["btn_game_mode"] then
