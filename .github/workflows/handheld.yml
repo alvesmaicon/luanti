@@ -1,0 +1,119 @@
+name: handheld
+
+# The handheld's build (GA36-MB: Allwinner A33, armv7 hard-float, GLES2), cross-compiled, unit tests under qemu-arm
+on:
+  push:
+    branches:
+      - 'handheld/**'
+      - 'ci/**'
+    tags:
+      - '*-handheld.*'
+  pull_request:
+  workflow_dispatch:
+
+# A newer push cancels the older run on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  armhf:
+    name: "armhf (Cortex-A7, GLES2), unit tests under qemu-arm"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # Debian stable: gcc 14, SDL2 2.32 and multiarch armhf
+    container: debian:trixie
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      # git before checkout, so it clones instead of downloading a tarball
+      - name: Install deps
+        run: |
+          dpkg --add-architecture armhf
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates git zstd file cmake ninja-build ccache gettext qemu-user \
+            crossbuild-essential-armhf \
+            libfreetype-dev:armhf libjpeg-dev:armhf libjsoncpp-dev:armhf \
+            libgles-dev:armhf libegl-dev:armhf libpng-dev:armhf \
+            libogg-dev:armhf libvorbis-dev:armhf libopenal-dev:armhf \
+            libsdl2-dev:armhf libsqlite3-dev:armhf zlib1g-dev:armhf libzstd-dev:armhf
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: handheld-armhf-ccache-${{ github.sha }}
+          restore-keys: handheld-armhf-ccache-
+
+      - name: Build
+        run: |
+          mkdir -p build
+          # The console's Buildroot flags (the A33's and -O2); Debian's gcc adds a 64-bit time_t, Buildroot's has 32
+          cat > build/armhf.cmake <<'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR arm)
+          set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+          set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+          set(CMAKE_C_FLAGS_INIT "-march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mthumb -ftree-vectorize -O2")
+          set(CMAKE_CXX_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}")
+          set(CMAKE_C_FLAGS_RELEASE " -DNDEBUG" CACHE STRING "")
+          set(CMAKE_CXX_FLAGS_RELEASE " -DNDEBUG" CACHE STRING "")
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_CROSSCOMPILING_EMULATOR qemu-arm)
+          EOF
+          export CCACHE_DIR="$PWD/.ccache" CCACHE_MAXSIZE=500M
+          ccache -z
+          # luanti.mk's options in goodluckOS, plus the unit tests and devtest (for the tests that load it)
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=build/armhf.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DBUILD_CLIENT=ON \
+            -DBUILD_SERVER=OFF \
+            -DBUILD_UNITTESTS=ON \
+            -DBUILD_BENCHMARKS=OFF \
+            -DBUILD_DOCUMENTATION=OFF \
+            -DRUN_IN_PLACE=OFF \
+            -DENABLE_UPDATE_CHECKER=OFF \
+            -DENABLE_LTO=OFF \
+            -DENABLE_GLES2=ON \
+            -DENABLE_OPENGL=OFF \
+            -DENABLE_OPENGL3=OFF \
+            -DENABLE_SOUND=ON \
+            -DENABLE_CURL=OFF \
+            -DENABLE_OPENSSL=OFF \
+            -DENABLE_CURSES=OFF \
+            -DENABLE_POSTGRESQL=OFF \
+            -DENABLE_LEVELDB=OFF \
+            -DENABLE_REDIS=OFF \
+            -DENABLE_SPATIAL=OFF \
+            -DENABLE_PROMETHEUS=OFF \
+            -DENABLE_SYSTEM_GMP=OFF \
+            -DENABLE_SYSTEM_JSONCPP=ON \
+            -DENABLE_LUAJIT=OFF \
+            -DENABLE_GETTEXT=ON \
+            -DINSTALL_DEVTEST=ON
+          cmake --build build
+          DESTDIR="$PWD/stage" cmake --install build
+          ccache -s
+          file stage/usr/bin/luanti
+
+      # Saved once the build is done, so a failing test doesn't cost the next run its cache
+      - uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: handheld-armhf-ccache-${{ github.sha }}
+
+      # Installed as on the console: the binary finds builtin/ and games/ in ../share/luanti
+      - name: Unittest
+        run: |
+          # Docker's ::1 localhost, without IPv6, resolves as a second 127.0.0.1 (TestAddress fails); the console has no ::1
+          grep -v '^::1' /etc/hosts > hosts.console && cat hosts.console > /etc/hosts && rm hosts.console
+          qemu-arm stage/usr/bin/luanti --run-unittests
