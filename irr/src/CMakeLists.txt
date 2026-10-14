@@ -427,6 +427,7 @@ add_library(IRRGUIOBJ OBJECT
 	CGUITabControl.h
 	CGUISpriteBank.h
 	CGUIImageList.h
+	CGUIOnScreenKeyboard.h
 
 	CGUIButton.cpp
 	CGUICheckBox.cpp
@@ -443,6 +444,7 @@ add_library(IRRGUIOBJ OBJECT
 	CGUITabControl.cpp
 	CGUISpriteBank.cpp
 	CGUIImageList.cpp
+	CGUIOnScreenKeyboard.cpp
 )
 
 # Library

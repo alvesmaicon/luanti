@@ -62,6 +62,16 @@ public:
 	//! drawAll() ends with an arrow at this cursor while it is visible (no system cursor, e.g. KMSDRM)
 	virtual void setSoftwareCursor(ICursorControl *cursor) {}
 
+	//! A keyboard on the screen for the gamepad that drives the software cursor: it types into the focused
+	//! edit box through the user receiver, as a keyboard would. Opens if the focus takes text under the cursor.
+	virtual bool openOnScreenKeyboard() { return false; }
+	virtual bool isOnScreenKeyboardOpen() const { return false; }
+	//! a gamepad button pressed while it is open (a held D-pad direction again as it repeats)
+	virtual void onScreenKeyboardButton(GamepadButton button) {}
+	//! the labels of its space, delete and ok keys and its line of hints, in the user's language
+	virtual void setOnScreenKeyboardTexts(const core::stringw &space, const core::stringw &del,
+			const core::stringw &ok, const core::stringw &hints) {}
+
 	//! Sets the focus to an element.
 	/** Causes a EGET_ELEMENT_FOCUS_LOST event followed by a
 	EGET_ELEMENT_FOCUSED event. If someone absorbed either of the events,

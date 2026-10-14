@@ -1060,6 +1060,22 @@ msgstr "Criativo"
 msgid "Allow changing the game mode"
 msgstr "Permitir trocar de modo"
 
+#: src/client/clientlauncher.cpp
+msgid "space"
+msgstr "espaço"
+
+#: src/client/clientlauncher.cpp
+msgid "delete"
+msgstr "apagar"
+
+#: src/client/clientlauncher.cpp
+msgid "ok"
+msgstr "ok"
+
+#: src/client/clientlauncher.cpp
+msgid "B: type   A: delete   START: done   SELECT: cancel   L1/R1: cursor"
+msgstr "B: digitar   A: apagar   START: pronto   SELECT: cancelar   L1/R1: cursor"
+
 #: builtin/mainmenu/dlg_create_world.lua src/settings_translation_file.cpp
 msgid "Mapgen flags"
 msgstr "Opções de geração de mundo"
