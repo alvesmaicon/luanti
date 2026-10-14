@@ -1170,6 +1170,13 @@ bool CIrrDeviceSDL::run()
 //! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
 bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 {
+	const u32 bit = 1u << static_cast<u32>(button);
+	// the on-screen keyboard takes the buttons pressed while it is open
+	if (GUIEnvironment && GUIEnvironment->isOnScreenKeyboardOpen() && !(GamepadMouseButtons & bit)) {
+		gamepadButtonToKeyboard(button, down);
+		return true;
+	}
+
 	switch (button) {
 	case GamepadButton::SOUTH:
 	case GamepadButton::WEST:
@@ -1187,7 +1194,6 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 		return false;
 	}
 
-	const u32 bit = 1u << static_cast<u32>(button);
 	if (down) {
 		if (!CursorControl->isVisible())
 			return false;
@@ -1202,6 +1208,9 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 	case GamepadButton::SOUTH:
 	case GamepadButton::NORTH:
 		postGamepadClick(SDL_BUTTON_LEFT, down);
+		// a click on a text field opens the on-screen keyboard
+		if (!down && GUIEnvironment)
+			GUIEnvironment->openOnScreenKeyboard();
 		break;
 	case GamepadButton::WEST:
 		postGamepadClick(SDL_BUTTON_RIGHT, down);
@@ -1221,6 +1230,24 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 	return true;
 }
 
+//! While the on-screen keyboard is open: a held D-pad direction moves again after 350 ms, then every 60 ms,
+//! as on the launcher
+void CIrrDeviceSDL::gamepadButtonToKeyboard(GamepadButton button, bool down)
+{
+	const bool dpad = button == GamepadButton::DPAD_UP || button == GamepadButton::DPAD_DOWN ||
+			button == GamepadButton::DPAD_LEFT || button == GamepadButton::DPAD_RIGHT;
+	if (!down) {
+		if (button == KeyboardRepeatButton)
+			KeyboardRepeatButton = GamepadButton::COUNT;
+		return;
+	}
+	GUIEnvironment->onScreenKeyboardButton(button);
+	if (dpad) {
+		KeyboardRepeatButton = button;
+		KeyboardRepeatTime = os::Timer::getRealTime() + 350;
+	}
+}
+
 //! Either stick moves the cursor (slowly near the center, a screen height per second at full tilt);
 //! the D-pad nudges it
 void CIrrDeviceSDL::moveCursorWithGamepad()
@@ -1228,6 +1255,15 @@ void CIrrDeviceSDL::moveCursorWithGamepad()
 	const u32 now = os::Timer::getRealTime();
 	const f32 dt = core::clamp((now - GamepadCursorTime) / 1000.0f, 0.0f, 0.1f);
 	GamepadCursorTime = now;
+
+	if (GUIEnvironment && GUIEnvironment->isOnScreenKeyboardOpen()) {
+		if (KeyboardRepeatButton != GamepadButton::COUNT && (s32)(now - KeyboardRepeatTime) >= 0) {
+			GUIEnvironment->onScreenKeyboardButton(KeyboardRepeatButton);
+			KeyboardRepeatTime = now + 60;
+		}
+		return;
+	}
+	KeyboardRepeatButton = GamepadButton::COUNT;
 
 	if (!CursorControl->isVisible()) {
 		GamepadCursorShown = false;

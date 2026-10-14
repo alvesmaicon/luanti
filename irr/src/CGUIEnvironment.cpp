@@ -112,6 +112,8 @@ CGUIEnvironment::~CGUIEnvironment()
 		Operator = 0;
 	}
 
+	OnScreenKeyboard.close(true);
+
 	if (SoftwareCursor) {
 		SoftwareCursor->drop();
 		SoftwareCursor = nullptr;
@@ -169,7 +171,13 @@ void CGUIEnvironment::drawAll(bool useScreenSize)
 	draw();
 	OnPostRender(os::Timer::getTime());
 
-	if (SoftwareCursor && SoftwareCursor->isVisible())
+	// the keyboard goes with the edit box it types into; while it is open, the gamepad drives it, not the cursor
+	IGUIElement *box = OnScreenKeyboard.getBox();
+	if (box && (box != Focus || !box->isTrulyVisible()))
+		OnScreenKeyboard.close(true);
+	if (OnScreenKeyboard.isOpen())
+		OnScreenKeyboard.draw(Driver, getSkin() ? getSkin()->getFont() : getBuiltInFont());
+	else if (SoftwareCursor && SoftwareCursor->isVisible())
 		drawSoftwareCursor();
 
 	clearDeletionQueue();
@@ -182,6 +190,30 @@ void CGUIEnvironment::setSoftwareCursor(ICursorControl *cursor)
 	if (SoftwareCursor)
 		SoftwareCursor->drop();
 	SoftwareCursor = cursor;
+}
+
+bool CGUIEnvironment::openOnScreenKeyboard()
+{
+	if (!SoftwareCursor || !Focus || !Focus->acceptsIME() ||
+			!Focus->getAbsoluteClippingRect().isPointInside(SoftwareCursor->getPosition()))
+		return false;
+	OnScreenKeyboard.open(Focus);
+	return true;
+}
+
+void CGUIEnvironment::onScreenKeyboardButton(GamepadButton button)
+{
+	// as the device posts what a keyboard types: to the user receiver, then to the focus
+	OnScreenKeyboard.button(button, [this](const SEvent &event) {
+		if (!UserReceiver || !UserReceiver->OnEvent(event))
+			postEventFromUser(event);
+	});
+}
+
+void CGUIEnvironment::setOnScreenKeyboardTexts(const core::stringw &space, const core::stringw &del,
+		const core::stringw &ok, const core::stringw &hints)
+{
+	OnScreenKeyboard.setTexts(space, del, ok, hints);
 }
 
 //! a 12x19 arrow, tip at (0, 0): '#' outline, '.' fill

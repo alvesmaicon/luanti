@@ -368,6 +368,11 @@ void ClientLauncher::config_guienv()
 	skin->setBehavior(gui::EGDB_SMOOTH_SCROLL, g_settings->getBool("smooth_scrolling"));
 	skin->setBehavior(gui::EGDB_SCOLLBAR_JUMP_TO_CLICKED, true);
 
+	// the gamepad's on-screen keyboard (KMSDRM): B and A by position, as goodluckOS maps them
+	guienv->setOnScreenKeyboardTexts(wstrgettext("space").c_str(), wstrgettext("delete").c_str(),
+			wstrgettext("ok").c_str(),
+			wstrgettext("B: type   A: delete   START: done   SELECT: cancel   L1/R1: cursor").c_str());
+
 	static u32 orig_sprite_id = skin->getIcon(gui::EGDI_CHECK_BOX_CHECKED);
 	static std::unordered_map<std::string, u32> sprite_ids;
 

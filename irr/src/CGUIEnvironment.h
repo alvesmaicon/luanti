@@ -9,6 +9,7 @@
 #include "irrArray.h"
 #include "IFileSystem.h"
 #include "IOSOperator.h"
+#include "CGUIOnScreenKeyboard.h"
 
 namespace gui
 {
@@ -26,6 +27,12 @@ public:
 	void drawAll(bool useScreenSize) override;
 
 	void setSoftwareCursor(ICursorControl *cursor) override;
+
+	bool openOnScreenKeyboard() override;
+	bool isOnScreenKeyboardOpen() const override { return OnScreenKeyboard.isOpen(); }
+	void onScreenKeyboardButton(GamepadButton button) override;
+	void setOnScreenKeyboardTexts(const core::stringw &space, const core::stringw &del,
+			const core::stringw &ok, const core::stringw &hints) override;
 
 	//! returns the current video driver
 	video::IVideoDriver *getVideoDriver() const override;
@@ -219,6 +226,7 @@ private:
 	IOSOperator *Operator;
 	ICursorControl *SoftwareCursor = nullptr;
 	video::ITexture *SoftwareCursorTexture = nullptr;
+	CGUIOnScreenKeyboard OnScreenKeyboard;
 	u32 FocusFlags;
 	core::array<IGUIElement *> DeletionQueue;
 

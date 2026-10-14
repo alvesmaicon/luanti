@@ -319,7 +319,11 @@ private:
 	u32 GamepadMouseButtons = 0; // pressed as the mouse, so their release goes the same way
 	u32 GamepadCursorTime = 0;
 	f32 GamepadCursorX = 0.0f, GamepadCursorY = 0.0f;
+	// the on-screen keyboard: a held D-pad direction repeats
+	GamepadButton KeyboardRepeatButton = GamepadButton::COUNT;
+	u32 KeyboardRepeatTime = 0;
 	bool gamepadButtonAsMouse(GamepadButton button, bool down);
+	void gamepadButtonToKeyboard(GamepadButton button, bool down);
 	void moveCursorWithGamepad();
 	void postGamepadClick(u32 button, bool down);
 	void postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel = 0.0f);
