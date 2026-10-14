@@ -50,6 +50,10 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 | Nodes drawn as opaque cubes occlude (leaves with `leaves_style = opaque`) | |
 | Blocks out of view are unloaded too; blocks are kept alive even below 5 FPS ([#7](https://github.com/alvesmaicon/luanti/issues/7)) | `client_unload_out_of_view` (true), `client_unload_unused_data_timeout` (120) |
 | Far regions of 2x2x2 mapblocks are drawn from one simplified mesh (one cube per 2x2x2 nodes, equal faces merged), with no detail meshes far away | `client_lod_distance` (160, 0 turns it off) |
+| The New World dialog picks the game mode, Survival or Creative, with a button as in Minecraft, and can allow changing it in game | |
+| A main menu without what needs a network or a keyboard | `menu_handheld` (true) |
+| On KMSDRM, an on-screen keyboard for the gamepad types into any text field | |
+| Settings open on a Video page with the render distance in chunks | `menu_handheld` (true) |
 
 Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
 
@@ -68,6 +72,10 @@ enable_3d_clouds = false
 client_mesh_chunk = 1        # simplified meshes need 1 or 2
 undersampling = 1            # 2 halves the resolution: faster, blurrier
 ```
+
+### Roadmap
+
+What is left, and what was already found out on the way: [doc/handheld/ROADMAP.md](doc/handheld/ROADMAP.md).
 
 ### Building
 
