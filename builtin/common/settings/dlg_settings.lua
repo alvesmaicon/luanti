@@ -170,6 +170,52 @@ local function load()
 		table.insert(content, idx, note)
 	end
 
+	if core.settings:get_bool("menu_handheld") then
+		-- first page: the render distance in chunks of 16 nodes, as in Minecraft, picked instead of typed;
+		-- five choices, the most a dropdown shows without scrolling
+		local render_distance = {
+			query_text = "Render distance",
+			info_text = fgettext_ne("How far you can see. Fewer chunks make the game faster."),
+			max_w = 4.5,
+
+			get_formspec = function(self, avail_w)
+				local range = tonumber(core.settings:get("viewing_range")) or 190
+				self.values = {}
+				for _, chunks in ipairs({4, 8, 12, 16, 20}) do
+					if range < chunks * 16 and table.indexof(self.values, range) < 0 then
+						self.values[#self.values + 1] = range
+					end
+					self.values[#self.values + 1] = chunks * 16
+				end
+				if range > self.values[#self.values] then
+					self.values[#self.values + 1] = range
+				end
+				local items = {}
+				for i, value in ipairs(self.values) do
+					items[i] = value % 16 == 0 and fgettext("$1 chunks", value / 16) or fgettext("$1 nodes", value)
+				end
+				return ("label[0,0.1;%s]dropdown[0,0.3;%f,0.8;handheld_range;%s;%d;true]"):format(
+					fgettext("Render distance"), avail_w, table.concat(items, ","),
+					table.indexof(self.values, range)), 1.1
+			end,
+
+			on_submit = function(self, fields)
+				local value = (self.values or {})[tonumber(fields.handheld_range) or 0]
+				if not value or value == tonumber(core.settings:get("viewing_range")) then
+					return false
+				end
+				core.settings:set("viewing_range", tostring(value))
+				return true
+			end,
+		}
+		add_page({
+			id = "handheld",
+			title = fgettext_ne("Video"),
+			content = { render_distance },
+		})
+		table.insert(all_pages, 1, table.remove(all_pages))
+	end
+
 	-- These must not be translated, as they need to show in the local
 	-- language no matter the user's current language.
 	-- This list must be kept in sync with src/unsupported_language_list.txt.

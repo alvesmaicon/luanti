@@ -346,6 +346,26 @@ msgstr "<vazio>"
 msgid "Accessibility"
 msgstr "Acessibilidade"
 
+#: builtin/common/settings/dlg_settings.lua
+msgid "$1 chunks"
+msgstr "$1 chunks"
+
+#: builtin/common/settings/dlg_settings.lua
+msgid "$1 nodes"
+msgstr "$1 blocos"
+
+#: builtin/common/settings/dlg_settings.lua
+msgid "How far you can see. Fewer chunks make the game faster."
+msgstr "Até onde você enxerga. Menos chunks deixam o jogo mais rápido."
+
+#: builtin/common/settings/dlg_settings.lua
+msgid "Render distance"
+msgstr "Distância de renderização"
+
+#: builtin/common/settings/dlg_settings.lua
+msgid "Video"
+msgstr "Vídeo"
+
 #. TRANSLATORS: Automatic
 #: builtin/common/settings/dlg_settings.lua
 msgid "Auto"
