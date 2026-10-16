@@ -57,6 +57,7 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 | Blocks in the inventory and the HUD hotbar take slices of the depth range instead of a depth clear each, which on lima submitted the whole frame once per block (inventory page of blocks: 138 to 33 ms a frame on the A33; in game, with a hotbar of blocks, 33 to 25 ms) | |
 | The HUD (hotbar, status bars, crosshair) isn't drawn under a menu, which on a small screen covers most of it | |
 | The first item of an `offhand` inventory list is held in the left hand in first person, lowered or raised by its meta field `raised` (a shield) | `offhand_position`, `offhand_rotation`, `offhand_raised_position`, `offhand_raised_rotation` |
+| The wielded item's rest pose is a setting, with its own for blocks drawn as nodes (the handheld poses them as Minecraft does at 640x480) | `wield_position`, `wield_rotation`, `wield_node_position`, `wield_node_rotation` |
 
 Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
 
