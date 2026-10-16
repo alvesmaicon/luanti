@@ -206,6 +206,9 @@ private:
 	// lowered and raised
 	v3f m_offhand_position[2];
 	v3f m_offhand_rotation[2];
+	// The wielded item's rest pose: an extruded image, and a node drawn as itself
+	v3f m_wield_position[2];
+	v3f m_wield_rotation[2];
 
 	// draw control
 	MapDrawControl& m_draw_control;

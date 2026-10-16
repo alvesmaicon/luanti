@@ -38,6 +38,7 @@ static const char *setting_names[] = {
 	"view_bobbing_amount", "fov", "arm_inertia",
 	"show_nametag_backgrounds", "offhand_position", "offhand_rotation",
 	"offhand_raised_position", "offhand_raised_rotation",
+	"wield_position", "wield_rotation", "wield_node_position", "wield_node_rotation",
 };
 
 Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *rendering_engine):
@@ -95,6 +96,10 @@ void Camera::readSettings()
 	m_offhand_rotation[0] = g_settings->getV3F("offhand_rotation").value_or(v3f(0, -25, 0));
 	m_offhand_position[1] = g_settings->getV3F("offhand_raised_position").value_or(v3f(-22, -18, 50));
 	m_offhand_rotation[1] = g_settings->getV3F("offhand_raised_rotation").value_or(v3f(0, 10, 0));
+	m_wield_position[0] = g_settings->getV3F("wield_position").value_or(v3f(55, -35, 65));
+	m_wield_rotation[0] = g_settings->getV3F("wield_rotation").value_or(v3f(-100, 120, -100));
+	m_wield_position[1] = g_settings->getV3F("wield_node_position").value_or(v3f(55, -35, 65));
+	m_wield_rotation[1] = g_settings->getV3F("wield_node_rotation").value_or(v3f(-100, 120, -100));
 }
 
 Camera::~Camera()
@@ -514,9 +519,11 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 	if (m_arm_inertia)
 		addArmInertia(yaw);
 
-	// Position the wielded item
-	v3f wield_position = v3f(m_wieldmesh_offset.X, m_wieldmesh_offset.Y, 65);
-	v3f wield_rotation = v3f(-100, 120, -100);
+	// Position the wielded item: its rest pose, with the arm's inertia around it
+	const int pose = m_wieldnode->isNodeMesh() ? 1 : 0;
+	v3f wield_position = m_wield_position[pose] + v3f(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X,
+			m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
+	v3f wield_rotation = m_wield_rotation[pose];
 	wield_position.Y += std::abs(m_wield_change_timer)*320 - 40;
 	if(m_digging_anim < 0.05 || m_digging_anim > 0.5)
 	{
@@ -538,8 +545,12 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 		wield_position.Z += 25 * 0.5;
 
 		// Euler angles are PURE EVIL, so why not use quaternions?
+		// The swing turns the item from its rest pose as it turns the default one to (80, 30, 100)
 		core::quaternion quat_begin(wield_rotation * core::DEGTORAD);
-		core::quaternion quat_end(v3f(80, 30, 100) * core::DEGTORAD);
+		core::quaternion swing(v3f(-100, 120, -100) * core::DEGTORAD);
+		swing.makeInverse();
+		swing = swing * core::quaternion(v3f(80, 30, 100) * core::DEGTORAD);
+		core::quaternion quat_end = quat_begin * swing;
 		core::quaternion quat_slerp;
 		quat_slerp.slerp(quat_begin, quat_end, std::sin(digfrac * M_PI));
 		quat_slerp.toEuler(wield_rotation);

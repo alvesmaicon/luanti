@@ -133,6 +133,9 @@ public:
 
 	scene::IMesh *getMesh() { return m_meshnode->getMesh(); }
 
+	// Drawn as the node itself (a cube...), not as an extruded image
+	bool isNodeMesh() const { return m_node_mesh; }
+
 	virtual void render();
 
 	virtual const aabb3f &getBoundingBox() const { return m_bounding_box; }
@@ -145,6 +148,7 @@ private:
 
 	// Child scene node with the current wield mesh
 	scene::IMeshSceneNode *m_meshnode = nullptr;
+	bool m_node_mesh = false;
 	// Material types used as fallback
 	video::E_MATERIAL_TYPE m_material_type;
 
