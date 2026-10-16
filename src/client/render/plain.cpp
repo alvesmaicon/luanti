@@ -14,6 +14,7 @@
 #include "client/shadows/dynamicshadowsrender.h"
 #include <IGUIEnvironment.h>
 #include "gui/drawItemStack.h"
+#include "gui/mainmenumanager.h"
 
 /// Draw3D pipeline step
 void Draw3D::run(PipelineContext &context)
@@ -41,17 +42,20 @@ void DrawWield::run(PipelineContext &context)
 void DrawHUD::run(PipelineContext &context)
 {
 	drawItemStackDepthReset();
+	// a menu (the inventory, a chest) covers the game: the hotbar, the bars and the crosshair would show around it
+	const bool menu = isMenuActive();
 	if (context.show_hud) {
 		if (context.shadow_renderer)
 			context.shadow_renderer->drawDebug();
 
 		context.hud->resizeHotbar();
 
-		if (context.draw_crosshair)
+		if (context.draw_crosshair && !menu)
 			context.hud->drawCrosshair();
 	}
 
-	context.hud->drawLuaElements(context.client->getCamera()->getOffset(), !context.show_hud);
+	if (!menu)
+		context.hud->drawLuaElements(context.client->getCamera()->getOffset(), !context.show_hud);
 
 	if (context.show_hud) {
 		context.client->getCamera()->drawNametags();
