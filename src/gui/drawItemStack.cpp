@@ -23,6 +23,17 @@ struct MeshTimeInfo {
 	scene::IMesh *mesh = nullptr;
 };
 
+// Each item mesh is drawn in a thin slice of the depth range, nearer than the slices before it, instead of after a
+// depth clear: on tiled GPUs a clear that follows a draw ends the render pass (lima submits the frame so far and
+// reloads it), which brought a full inventory down to a few FPS. Only the first mesh after a reset clears.
+static constexpr u32 DEPTH_SLICES = 256;
+static u32 depth_slice = 0;
+
+void drawItemStackDepthReset()
+{
+	depth_slice = 0;
+}
+
 void drawItemStack(
 		video::IVideoDriver *driver,
 		gui::IGUIFont *font,
@@ -69,7 +80,10 @@ void drawItemStack(
 	}
 	if (has_mesh) {
 		scene::IMesh *mesh = imesh->mesh;
-		driver->clearBuffers(video::ECBF_DEPTH);
+		if (depth_slice == 0 || depth_slice >= DEPTH_SLICES) {
+			driver->clearBuffers(video::ECBF_DEPTH);
+			depth_slice = 0;
+		}
 		s32 delta = 0;
 		if (rotation_kind < IT_ROT_NONE) {
 			MeshTimeInfo &ti = rotation_time_infos[rotation_kind];
@@ -86,6 +100,12 @@ void drawItemStack(
 
 		core::matrix4 ProjMatrix;
 		ProjMatrix.buildProjectionMatrixOrthoLH(2.0f, 2.0f, -1.0f, 100.0f);
+		// ViewMatrix below maps z from -1 to 3 onto 0 to 4/101: that goes into this mesh's slice of the clip range,
+		// the first slice the farthest
+		const f32 slice = 2.0f / DEPTH_SLICES;
+		ProjMatrix[10] = slice * 101.0f / 4.0f;
+		ProjMatrix[14] = 1.0f - slice * (depth_slice + 1);
+		depth_slice++;
 
 		core::matrix4 ViewMatrix;
 		ViewMatrix.buildProjectionMatrixOrthoLH(

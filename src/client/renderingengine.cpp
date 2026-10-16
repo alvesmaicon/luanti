@@ -20,6 +20,7 @@
 #include "porting.h"
 #include "clientmap.h"
 #include "renderingengine.h"
+#include "gui/drawItemStack.h"
 #include "render/core.h"
 #include "render/factory.h"
 #include "filesys.h"
@@ -370,6 +371,7 @@ void RenderingEngine::draw_load_screen(const std::wstring &text,
 		}
 	}
 
+	drawItemStackDepthReset();
 	guienv->drawAll();
 	driver->endScene();
 	guitext->remove();
