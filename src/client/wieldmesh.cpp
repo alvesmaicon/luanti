@@ -434,6 +434,7 @@ void WieldMeshSceneNode::setItem(const ItemStack &item, Client *client, bool che
 	const ItemDefinition &def = item.getDefinition(idef);
 	const ContentFeatures &f = ndef->get(def.name);
 	const NodeVisuals &v = *(f.visuals);
+	m_node_mesh = false;
 
 	{
 		// Initialize material type used by setExtruded
@@ -527,6 +528,7 @@ void WieldMeshSceneNode::setItem(const ItemStack &item, Client *client, bool che
 			mesh = createGenericNodeMesh(client, n, &m_buffer_info, f);
 			changeToMesh(mesh);
 			mesh->drop();
+			m_node_mesh = true;
 			m_meshnode->setScale(
 				wield_scale * WIELD_SCALE_FACTOR
 				/ (BS * f.visual_scale));
