@@ -13,6 +13,7 @@
 #include "client/minimap.h"
 #include "client/shadows/dynamicshadowsrender.h"
 #include <IGUIEnvironment.h>
+#include "gui/drawItemStack.h"
 
 /// Draw3D pipeline step
 void Draw3D::run(PipelineContext &context)
@@ -39,6 +40,7 @@ void DrawWield::run(PipelineContext &context)
 
 void DrawHUD::run(PipelineContext &context)
 {
+	drawItemStackDepthReset();
 	if (context.show_hud) {
 		if (context.shadow_renderer)
 			context.shadow_renderer->drawDebug();

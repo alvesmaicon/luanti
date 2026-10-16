@@ -3,6 +3,7 @@
 // Copyright (C) 2013 sapier
 
 #include "guiEngine.h"
+#include "drawItemStack.h"
 #include "statusTextHelper.h"
 
 #include "client/fontengine.h"
@@ -368,6 +369,7 @@ void GUIEngine::run()
 
 			drawFooter(driver);
 
+			drawItemStackDepthReset();
 			m_rendering_engine->get_gui_env()->drawAll();
 
 			// The header *must* be drawn after the menu because it uses

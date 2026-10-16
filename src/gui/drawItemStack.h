@@ -21,6 +21,10 @@ enum ItemRotationKind
 	IT_ROT_NONE, // Must be last, also serves as number
 };
 
+// Item meshes share the depth buffer instead of clearing it each: call at the start of a frame's 2D drawing, and after
+// anything else in the GUI used the depth buffer (a 3D scene), so that the next mesh clears it once
+void drawItemStackDepthReset();
+
 void drawItemStack(video::IVideoDriver *driver,
 		gui::IGUIFont *font,
 		const ItemStack &item,

@@ -3,6 +3,7 @@
 // Copyright (C) 2020 Jean-Patrick Guerrero <jeanpatrick.guerrero@gmail.com>
 
 #include "guiScene.h"
+#include "drawItemStack.h"
 
 #include <SViewFrustum.h>
 #include <AnimatedMeshSceneNode.h>
@@ -112,6 +113,7 @@ void GUIScene::draw()
 
 	cameraLoop();
 	m_smgr->drawAll();
+	drawItemStackDepthReset();
 
 	m_driver->setViewPort(oldViewPort);
 }
