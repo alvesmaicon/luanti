@@ -307,6 +307,10 @@ void set_default_settings()
 	settings->setDefault("enable_local_map_saving", "false");
 	settings->setDefault("show_entity_selectionbox", "false");
 	settings->setDefault("arm_inertia", "true");
+	settings->setDefault("offhand_position", "(-41, -32, 65)");
+	settings->setDefault("offhand_rotation", "(0, -25, 0)");
+	settings->setDefault("offhand_raised_position", "(-22, -18, 50)");
+	settings->setDefault("offhand_raised_rotation", "(0, 10, 0)");
 	settings->setDefault("hurt_flash_enabled", "true");
 	settings->setDefault("show_nametag_backgrounds", "true");
 	settings->setDefault("show_block_bounds_radius_near", "4");
