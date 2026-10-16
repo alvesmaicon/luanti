@@ -36,7 +36,8 @@ static constexpr f32 CAMERA_OFFSET_STEP = 200;
 
 static const char *setting_names[] = {
 	"view_bobbing_amount", "fov", "arm_inertia",
-	"show_nametag_backgrounds",
+	"show_nametag_backgrounds", "offhand_position", "offhand_rotation",
+	"offhand_raised_position", "offhand_raised_rotation",
 };
 
 Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *rendering_engine):
@@ -60,6 +61,10 @@ Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *re
 	m_wieldnode = new WieldMeshSceneNode(m_wieldmgr, -1);
 	m_wieldnode->setItem(ItemStack(), m_client);
 	m_wieldnode->drop(); // m_wieldmgr grabbed it
+	m_offhand_node = new WieldMeshSceneNode(m_wieldmgr, -1);
+	m_offhand_node->setItem(ItemStack(), m_client);
+	m_offhand_node->setVisible(false);
+	m_offhand_node->drop();
 
 	m_nametags.clear();
 
@@ -86,6 +91,10 @@ void Camera::readSettings()
 	m_cache_fov                 = g_settings->getFloat("fov", 45.0f, 160.0f);
 	m_arm_inertia               = g_settings->getBool("arm_inertia");
 	m_show_nametag_backgrounds  = g_settings->getBool("show_nametag_backgrounds");
+	m_offhand_position[0] = g_settings->getV3F("offhand_position").value_or(v3f(-41, -32, 65));
+	m_offhand_rotation[0] = g_settings->getV3F("offhand_rotation").value_or(v3f(0, -25, 0));
+	m_offhand_position[1] = g_settings->getV3F("offhand_raised_position").value_or(v3f(-22, -18, 50));
+	m_offhand_rotation[1] = g_settings->getV3F("offhand_raised_rotation").value_or(v3f(0, 10, 0));
 }
 
 Camera::~Camera()
@@ -546,6 +555,7 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 	m_player_light_color = player->light_color;
 	m_wieldnode->setLightColorAndAnimation(m_player_light_color,
 			m_client->getAnimationTime());
+	updateOffhand(player, frametime);
 
 	// Set render distance
 	updateViewingRange();
@@ -761,6 +771,49 @@ std::array<core::plane3d<f32>, 4> Camera::getFrustumCullPlanes() const
 		frustum_planes[SViewFrustum::VF_BOTTOM_PLANE],
 		frustum_planes[SViewFrustum::VF_TOP_PLANE],
 	};
+}
+
+void Camera::updateOffhand(LocalPlayer *player, f32 frametime)
+{
+	const InventoryList *list = player->inventory.getList("offhand");
+	const ItemStack item = list && list->getSize() > 0 ? list->getItem(0) : ItemStack();
+	if (item.name != m_offhand_name) {
+		m_offhand_name = item.name;
+		m_offhand_node->setItem(item, m_client);
+		m_offhand_equip = 0.0f;
+	}
+	m_offhand_node->setVisible(!item.empty());
+	if (item.empty())
+		return;
+
+	// The server sets the meta field "raised"; it goes up and down in 0.2 s
+	const f32 target = item.metadata.getString("raised") == "1" ? 1.0f : 0.0f;
+	const f32 step = frametime / 0.2f;
+	m_offhand_raise = target > m_offhand_raise ? std::min(target, m_offhand_raise + step)
+			: std::max(target, m_offhand_raise - step);
+	m_offhand_equip = std::min(1.0f, m_offhand_equip + frametime / 0.25f);
+
+	const f32 t = easeCurve(m_offhand_raise);
+	v3f pos = m_offhand_position[0] + (m_offhand_position[1] - m_offhand_position[0]) * t;
+	core::quaternion q;
+	q.slerp(core::quaternion(m_offhand_rotation[0] * core::DEGTORAD),
+			core::quaternion(m_offhand_rotation[1] * core::DEGTORAD), t);
+	v3f rot;
+	q.toEuler(rot);
+	rot *= core::RADTODEG;
+
+	// rises into view when it changes, and sways and bobs as the right hand, mirrored
+	pos.Y -= (1.0f - easeCurve(m_offhand_equip)) * 40.0f;
+	pos.X -= m_wieldmesh_offset.X - WIELDMESH_OFFSET_X;
+	pos.Y += m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y;
+	if (m_digging_button == -1) {
+		f32 bobfrac = my_modf(m_view_bobbing_anim);
+		pos.X += std::sin(bobfrac * M_PI * 2.0) * 3.0;
+		pos.Y += std::sin(my_modf(bobfrac * 2.0) * M_PI) * 3.0;
+	}
+	m_offhand_node->setPosition(pos);
+	m_offhand_node->setRotation(rot);
+	m_offhand_node->setLightColorAndAnimation(m_player_light_color, m_client->getAnimationTime());
 }
 
 void Camera::updateWieldedTool()

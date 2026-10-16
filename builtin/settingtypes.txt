@@ -526,6 +526,14 @@ undersampling (Undersampling) int 1 1 8
 #    the arm when the camera moves.
 arm_inertia (Arm inertia) bool true
 
+#    Where the item of the player's "offhand" inventory list (a shield) is held in
+#    first person: position and rotation in degrees, lowered and raised (while its
+#    meta field "raised" is "1").
+offhand_position (Off-hand position) v3f (-41, -32, 65)
+offhand_rotation (Off-hand rotation) v3f (0, -25, 0)
+offhand_raised_position (Raised off-hand position) v3f (-22, -18, 50)
+offhand_raised_rotation (Raised off-hand rotation) v3f (0, 10, 0)
+
 #    Enable view bobbing and amount of view bobbing.
 #    For example: 0 for no view bobbing; 1.0 for normal; 2.0 for double.
 view_bobbing_amount (View bobbing factor) float 1.0 0.0 7.9

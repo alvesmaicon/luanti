@@ -188,6 +188,9 @@ private:
 
 	void updateWieldedTool();
 
+	// The first item of the player's "offhand" list, held in the left hand
+	void updateOffhand(LocalPlayer *player, f32 frametime);
+
 	// Nodes
 	scene::ISceneNode *m_playernode = nullptr;
 	scene::ISceneNode *m_headnode = nullptr;
@@ -195,6 +198,14 @@ private:
 
 	scene::ISceneManager *m_wieldmgr = nullptr;
 	WieldMeshSceneNode *m_wieldnode = nullptr;
+	WieldMeshSceneNode *m_offhand_node = nullptr;
+	std::string m_offhand_name;
+	// 0 lowered .. 1 raised, and 0 .. 1 while it comes up into view
+	f32 m_offhand_raise = 0.0f;
+	f32 m_offhand_equip = 0.0f;
+	// lowered and raised
+	v3f m_offhand_position[2];
+	v3f m_offhand_rotation[2];
 
 	// draw control
 	MapDrawControl& m_draw_control;
