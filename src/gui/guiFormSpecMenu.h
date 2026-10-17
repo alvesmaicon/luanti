@@ -300,6 +300,8 @@ public:
 
 	void acceptInput(FormspecQuitMode quitmode=quit_mode_no);
 	bool preprocessEvent(const SEvent& event) override;
+	//! what a wheel turned by the gamepad at x, y scrolls
+	gui::IGUIElement *gamepadScrollTarget(s32 x, s32 y);
 	bool OnEvent(const SEvent& event) override;
 
 	bool doPause = false;

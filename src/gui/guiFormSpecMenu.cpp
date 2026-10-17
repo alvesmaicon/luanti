@@ -4467,6 +4467,18 @@ bool GUIFormSpecMenu::preprocessEvent(const SEvent& event)
 			}
 		}
 	}
+	// The gamepad's wheel scrolls what scrolls under the cursor, else the form's first scroll container,
+	// scrollbar or table: never an inventory list, where a wheel moves items
+	if (event.EventType == EET_MOUSE_INPUT_EVENT && event.MouseInput.Event == EMIE_MOUSE_WHEEL &&
+			event.MouseInput.Gamepad) {
+		if (gui::IGUIElement *target = gamepadScrollTarget(event.MouseInput.X, event.MouseInput.Y)) {
+			if (target->getType() == gui::EGUIET_SCROLL_BAR)
+				Environment->setFocus(target);
+			target->OnEvent(event);
+		}
+		return true;
+	}
+
 	// Mouse wheel and move events: send to hovered element instead of focused
 	if (event.EventType == EET_MOUSE_INPUT_EVENT &&
 			(event.MouseInput.Event == EMIE_MOUSE_WHEEL ||
@@ -4484,6 +4496,36 @@ bool GUIFormSpecMenu::preprocessEvent(const SEvent& event)
 	}
 
 	return false;
+}
+
+gui::IGUIElement *GUIFormSpecMenu::gamepadScrollTarget(s32 x, s32 y)
+{
+	const auto scrolls = [this](gui::IGUIElement *e) {
+		if (e->getType() == gui::EGUIET_SCROLL_BAR || e->getType() == gui::EGUIET_LIST_BOX ||
+				dynamic_cast<GUIHyperText *>(e))
+			return true;
+		for (const auto &container : m_scroll_containers)
+			if (container.second == e)
+				return true;
+		for (const auto &table : m_tables)
+			if (table.second == e)
+				return true;
+		return false;
+	};
+	gui::IGUIElement *e = Environment->getRootGUIElement()->getElementFromPoint(core::position2d<s32>(x, y));
+	for (; e && isMyDescendant(e); e = e->getParent())
+		if (scrolls(e) && e->isTrulyVisible())
+			return e;
+	for (const auto &container : m_scroll_containers)
+		if (container.second->isTrulyVisible())
+			return container.second;
+	for (const auto &scrollbar : m_scrollbars)
+		if (scrollbar.second->isTrulyVisible())
+			return scrollbar.second;
+	for (const auto &table : m_tables)
+		if (table.second->isTrulyVisible())
+			return table.second;
+	return nullptr;
 }
 
 void GUIFormSpecMenu::tryClose()

@@ -338,6 +338,7 @@ private:
 	s16 GamepadAxes[static_cast<int>(GamepadAxis::COUNT)] = {};
 	u32 GamepadMouseButtons = 0; // pressed as the mouse, so their release goes the same way
 	u32 GamepadCursorTime = 0;
+	u32 GamepadWheelTime = 0; // the right stick's next scroll step
 	f32 GamepadCursorX = 0.0f, GamepadCursorY = 0.0f;
 	// the on-screen keyboard: a held D-pad direction repeats
 	GamepadButton KeyboardRepeatButton = GamepadButton::COUNT;
@@ -347,6 +348,7 @@ private:
 	void moveCursorWithGamepad();
 	void postGamepadClick(u32 button, bool down);
 	void postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel = 0.0f);
+	void postGamepadWheel(f32 wheel);
 	void postGamepadEscape(bool down);
 #endif // _IRR_COMPILE_WITH_JOYSTICK_EVENTS_
 
