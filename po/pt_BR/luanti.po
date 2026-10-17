@@ -1084,6 +1084,10 @@ msgstr "Permitir trocar de modo"
 msgid "Bonus chest"
 msgstr "Baú inicial"
 
+#: src/client/game.cpp
+msgid "Loading terrain..."
+msgstr "Carregando terreno..."
+
 #: src/client/clientlauncher.cpp
 msgid "space"
 msgstr "espaço"

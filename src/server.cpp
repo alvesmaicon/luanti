@@ -651,6 +651,23 @@ void Server::stop()
 	infostream<<"Server: Threads stopped"<<std::endl;
 }
 
+bool Server::getMapSendProgress(MapSendProgress &progress)
+{
+	ClientInterface::AutoLock clientlock(m_clients);
+	for (const auto &client_it : m_clients.getClientList()) {
+		const RemoteClient *client = client_it.second;
+		if (client->getState() >= CS_Active) {
+			progress.nearest_unsent = client->getNearestUnsentD();
+			progress.full_sends = client->getFullSends();
+			progress.full_send_d = client->getFullSendD();
+			progress.blocks_sent = client->getBlocksSentCount();
+			progress.blocks_sending = client->getSendingCount();
+			return true;
+		}
+	}
+	return false;
+}
+
 void Server::step()
 {
 	// Throw if fatal error occurred in thread

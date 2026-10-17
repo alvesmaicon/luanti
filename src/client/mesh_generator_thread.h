@@ -94,6 +94,13 @@ public:
 		return m_queue.size();
 	}
 
+	//! updates queued or being made
+	size_t pending()
+	{
+		MutexAutoLock lock(m_mutex);
+		return m_queue.size() + m_inflight_blocks.size();
+	}
+
 	/// @param finish if true, also clears updates that need to be acked to the server
 	void clear(bool finish = false);
 
@@ -175,6 +182,10 @@ public:
 	void wait();
 
 	bool isRunning();
+	//! meshes asked for and not made yet, simplified far ones too
+	size_t pending() { return m_queue_in.pending() + m_lod_queue_in.pending(); }
+	//! every mesh asked for was made and taken
+	bool isIdle() { return pending() == 0 && m_queue_out.empty() && m_queue_out_urgent.empty(); }
 
 private:
 	typedef MutexedQueue<MeshUpdateResult> ResultQueue;

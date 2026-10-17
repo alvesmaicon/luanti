@@ -254,6 +254,8 @@ void set_default_settings()
 	settings->setDefault("fps_max", "60");
 	settings->setDefault("fps_max_unfocused", "10");
 	settings->setDefault("viewing_range", "190");
+	settings->setDefault("loading_terrain_radius", "0");
+	settings->setDefault("loading_terrain_timeout", "30");
 	settings->setDefault("client_mesh_chunk", "1");
 	settings->setDefault("client_lod_distance", "160");
 	settings->setDefault("screen_w", "1024");
