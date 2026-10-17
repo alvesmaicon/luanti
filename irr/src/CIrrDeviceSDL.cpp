@@ -1222,7 +1222,7 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 	case GamepadButton::LEFT_SHOULDER:
 	case GamepadButton::RIGHT_SHOULDER:
 		if (down)
-			postGamepadMouse(EMIE_MOUSE_WHEEL, button == GamepadButton::LEFT_SHOULDER ? 1.0f : -1.0f);
+			postGamepadWheel(button == GamepadButton::LEFT_SHOULDER ? 1.0f : -1.0f);
 		break;
 	default: // D-pad: moveCursorWithGamepad() reads it from GamepadMouseButtons
 		break;
@@ -1248,8 +1248,8 @@ void CIrrDeviceSDL::gamepadButtonToKeyboard(GamepadButton button, bool down)
 	}
 }
 
-//! Either stick moves the cursor (slowly near the center, a screen height per second at full tilt);
-//! the D-pad nudges it
+//! The left stick moves the cursor (slowly near the center, a screen height per second at full tilt) and the
+//! D-pad nudges it; the right stick scrolls, a step every 250 ms tilted a little, every 50 ms at full tilt
 void CIrrDeviceSDL::moveCursorWithGamepad()
 {
 	const u32 now = os::Timer::getRealTime();
@@ -1280,16 +1280,26 @@ void CIrrDeviceSDL::moveCursorWithGamepad()
 		return;
 	}
 
+	const f32 ry = GamepadAxes[static_cast<int>(GamepadAxis::RIGHTY)] / 32767.0f;
+	if (core::abs_(ry) >= 0.35f) {
+		if ((s32)(now - GamepadWheelTime) >= 0) {
+			const f32 tilt = core::min_((core::abs_(ry) - 0.35f) / 0.65f, 1.0f);
+			postGamepadWheel(ry < 0.0f ? 1.0f : -1.0f);
+			GamepadWheelTime = now + static_cast<u32>(250.0f - 200.0f * tilt);
+		}
+	} else {
+		GamepadWheelTime = now;
+	}
+
 	f32 vx = 0.0f, vy = 0.0f;
-	for (int axis : {static_cast<int>(GamepadAxis::LEFTX), static_cast<int>(GamepadAxis::RIGHTX)}) {
-		const f32 x = GamepadAxes[axis] / 32767.0f, y = GamepadAxes[axis + 1] / 32767.0f;
-		const f32 len = core::squareroot(x * x + y * y);
-		if (len < 0.25f)
-			continue;
+	const f32 lx = GamepadAxes[static_cast<int>(GamepadAxis::LEFTX)] / 32767.0f;
+	const f32 ly = GamepadAxes[static_cast<int>(GamepadAxis::LEFTY)] / 32767.0f;
+	const f32 len = core::squareroot(lx * lx + ly * ly);
+	if (len >= 0.25f) {
 		f32 speed = core::min_((len - 0.25f) / 0.75f, 1.0f);
 		speed *= speed;
-		vx += x / len * speed;
-		vy += y / len * speed;
+		vx += lx / len * speed;
+		vy += ly / len * speed;
 	}
 	const auto held = [this](GamepadButton b) {
 		return static_cast<f32>((GamepadMouseButtons >> static_cast<u32>(b)) & 1);
@@ -1343,6 +1353,19 @@ void CIrrDeviceSDL::postGamepadClick(u32 button, bool down)
 			postEventFromUser(irrevent);
 		}
 	}
+}
+
+void CIrrDeviceSDL::postGamepadWheel(f32 wheel)
+{
+	SEvent irrevent{};
+	irrevent.EventType = EET_MOUSE_INPUT_EVENT;
+	irrevent.MouseInput.Event = EMIE_MOUSE_WHEEL;
+	irrevent.MouseInput.Wheel = wheel;
+	irrevent.MouseInput.Gamepad = true;
+	irrevent.MouseInput.ButtonStates = MouseButtonStates;
+	irrevent.MouseInput.X = MouseX;
+	irrevent.MouseInput.Y = MouseY;
+	postEventFromUser(irrevent);
 }
 
 void CIrrDeviceSDL::postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel)
