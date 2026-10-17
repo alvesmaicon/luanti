@@ -62,6 +62,24 @@ void CGUIOnScreenKeyboard::close(bool accept)
 	Box = nullptr;
 }
 
+void CGUIOnScreenKeyboard::submit()
+{
+	IGUIElement *box = Box;
+	if (!box)
+		return;
+	box->grab();
+	close(true);
+	if (IGUIElement *parent = box->getParent()) {
+		SEvent enter{};
+		enter.EventType = EET_GUI_EVENT;
+		enter.GUIEvent.Caller = box;
+		enter.GUIEvent.Element = box;
+		enter.GUIEvent.EventType = EGET_EDITBOX_ENTER;
+		parent->OnEvent(enter);
+	}
+	box->drop();
+}
+
 void CGUIOnScreenKeyboard::setTexts(const core::stringw &space, const core::stringw &del,
 		const core::stringw &ok, const core::stringw &hints)
 {
@@ -108,7 +126,7 @@ void CGUIOnScreenKeyboard::press(const SKey &key, const Post &post)
 		Caps = !Caps;
 		break;
 	case TYPE_OK:
-		close(true);
+		submit();
 		break;
 	case TYPE_DEL:
 		postKey(KEY_BACK, post);
@@ -156,7 +174,7 @@ void CGUIOnScreenKeyboard::button(GamepadButton button, const Post &post)
 			postKey(KEY_BACK, post);
 		break;
 	case GamepadButton::START:
-		close(true);
+		submit();
 		break;
 	case GamepadButton::BACK:
 		close(false);

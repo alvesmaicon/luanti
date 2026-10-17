@@ -32,6 +32,9 @@ public:
 	void open(IGUIElement *box);
 	//! closes it; without accept, the box gets back the text it had
 	void close(bool accept);
+	//! closes it keeping the text, and tells the box's parent, as an Enter whose element is the box itself (a form
+	//! takes it as the field's Enter only where it asks for one: field_enter_after_edit)
+	void submit();
 	bool isOpen() const { return Box != nullptr; }
 	IGUIElement *getBox() const { return Box; }
 
