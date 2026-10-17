@@ -157,7 +157,9 @@ local function create_world_formspec(dialogdata)
 		return ("button[%g,%g;%g,0.5;btn_game_mode;%s]"):format(x, y, w,
 				fgettext("Game mode: $1", fgettext_ne(dialogdata.creative and "Creative" or "Survival"))) ..
 			("checkbox[%g,%g;cb_mode_change;%s;%s]"):format(x, y + 0.7,
-				fgettext("Allow changing the game mode"), tostring(dialogdata.mode_change))
+				fgettext("Allow changing the game mode"), tostring(dialogdata.mode_change)) ..
+			("checkbox[%g,%g;cb_bonus_chest;%s;%s]"):format(x, y + 1.25,
+				fgettext("Bonus chest"), tostring(dialogdata.bonus_chest))
 	end
 
 	-- a handheld types the name with the gamepad's keyboard (left empty, the next free one), and keeps the
@@ -426,6 +428,8 @@ local function create_world_buttonhandler(this, fields)
 			local world = menudata.worldlist:get_raw_element(index)
 			local conf = Settings(world.path .. DIR_DELIM .. "world.mt")
 			conf:set_bool("allow_mode_change", this.data.mode_change)
+			-- as Minecraft's: a chest of things to start with by the spawn
+			conf:set_bool("bonus_chest", this.data.bonus_chest)
 			conf:write()
 		end
 
@@ -444,6 +448,11 @@ local function create_world_buttonhandler(this, fields)
 
 	if fields["cb_mode_change"] then
 		this.data.mode_change = core.is_yes(fields["cb_mode_change"])
+		return true
+	end
+
+	if fields["cb_bonus_chest"] then
+		this.data.bonus_chest = core.is_yes(fields["cb_bonus_chest"])
 		return true
 	end
 
@@ -500,6 +509,7 @@ function create_create_world_dlg()
 		worldname = "",
 		creative = false,
 		mode_change = false,
+		bonus_chest = false,
 		-- settings the world is created with:
 		seed = core.settings:get("fixed_map_seed") or "",
 		flags = {

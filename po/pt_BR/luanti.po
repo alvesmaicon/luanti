@@ -1083,6 +1083,10 @@ msgstr "Criativo"
 msgid "Allow changing the game mode"
 msgstr "Permitir trocar de modo"
 
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Bonus chest"
+msgstr "Baú inicial"
+
 #: src/client/clientlauncher.cpp
 msgid "space"
 msgstr "espaço"
