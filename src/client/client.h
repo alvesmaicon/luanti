@@ -333,6 +333,15 @@ public:
 	{ return !m_media_downloader; }
 	bool activeObjectsReceived() const
 	{ return m_activeobjects_received; }
+	//! the server placed the player (TOCLIENT_MOVE_PLAYER)
+	bool playerPosReceived() const
+	{ return m_player_pos_received; }
+	//! every block mesh asked for so far was made and taken
+	bool meshesDone() const;
+	//! block meshes asked for and not made yet
+	size_t meshesPending() const;
+	//! block meshes made and taken so far
+	u32 meshesMade() const { return m_meshes_made; }
 
 	u16 getProtoVersion() const
 	{ return m_proto_ver; }
@@ -578,6 +587,8 @@ private:
 	std::queue<ClientEvent *> m_client_event_queue;
 	bool m_itemdef_received = false;
 	bool m_nodedef_received = false;
+	bool m_player_pos_received = false;
+	u32 m_meshes_made = 0;
 	bool m_activeobjects_received = false;
 	bool m_mods_loaded = false;
 

@@ -279,6 +279,14 @@ public:
 		return insert_result.second; // true = was inserted
 	}
 
+	//! every block closer than this many blocks was sent, culled or left out as air
+	s16 getNearestUnsentD() const { return m_nearest_unsent_d; }
+	//! how many times every block within range was, after which it starts over from 0
+	u32 getFullSends() const { return m_full_sends; }
+	//! the range (blocks) the last full send reached
+	s16 getFullSendD() const { return m_full_send_d; }
+	size_t getBlocksSentCount() const { return m_blocks_sent.size(); }
+
 	void PrintInfo(std::ostream &o)
 	{
 		o << "RemoteClient " << peer_id << ": "
@@ -410,6 +418,8 @@ private:
 
 	// measure how long it takes the server to send the complete map
 	float m_map_send_completion_timer = 0.0f;
+	u32 m_full_sends = 0;
+	s16 m_full_send_d = 0;
 
 	/*
 		name of player using this client

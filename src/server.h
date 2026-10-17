@@ -196,6 +196,18 @@ public:
 
 	void start();
 	void stop();
+	struct MapSendProgress {
+		//! every block closer than this many blocks was sent, culled or left out as air
+		s16 nearest_unsent = 0;
+		//! sweeps that reached the end of the range, and how far (blocks) the last one went
+		u32 full_sends = 0;
+		s16 full_send_d = 0;
+		size_t blocks_sent = 0;
+		//! sent and not yet acknowledged, which the client does once it has meshed them
+		u32 blocks_sending = 0;
+	};
+	//! the first active client's map sending (singleplayer: the only one); false without a client
+	bool getMapSendProgress(MapSendProgress &progress);
 	// Actual processing is done in another thread.
 	// This just checks if there was an error in that thread.
 	void step();

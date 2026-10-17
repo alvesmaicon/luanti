@@ -138,6 +138,7 @@ protected:
 	bool connectToServer(const GameStartData &start_data,
 			bool *connect_ok, bool *aborted);
 	bool getServerContent(bool *aborted);
+	bool loadTerrain();
 
 	// Main loop
 

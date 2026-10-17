@@ -127,6 +127,8 @@ public:
 			gui::IGUIEnvironment *guienv, ITextureSource *tsrc,
 			float dtime = 0, int percent = 0, float *indef_pos = nullptr,
 			const std::wstring &bottom_text = {});
+	//! the part of the bar the next load screens' 0-100 % fill: from..to %
+	void setLoadScreenRange(int from, int to) { m_load_from = from; m_load_to = to; }
 
 	void draw_scene(video::SColor skycolor, bool show_hud,
 			bool draw_wield_tool, bool draw_crosshair);
@@ -170,4 +172,5 @@ private:
 	video::IVideoDriver *driver;
 	MyEventReceiver *m_receiver = nullptr;
 	static RenderingEngine *s_singleton;
+	int m_load_from = 0, m_load_to = 100;
 };

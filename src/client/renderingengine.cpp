@@ -315,7 +315,7 @@ void RenderingEngine::draw_load_screen(const std::wstring &text,
 	}
 
 	int percent_min = 0;
-	int percent_max = percent;
+	int percent_max = m_load_from + (m_load_to - m_load_from) * percent / 100;
 	if (indef_pos) {
 		*indef_pos = fmodf(*indef_pos + (dtime * 50.0f), 140.0f);
 		percent_max = std::min((int) *indef_pos, 100);

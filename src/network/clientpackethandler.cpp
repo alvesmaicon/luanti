@@ -589,6 +589,13 @@ void Client::handleCommand_MovePlayer(NetworkPacket* pkt)
 	*pkt >> pos >> pitch >> yaw;
 
 	player->setPosition(pos);
+	// the look too, in the control that each step applies until the game's first frame sets it: the position
+	// sent while the terrain loads asks for what the player will see
+	player->setPitch(pitch);
+	player->setYaw(yaw);
+	player->control.pitch = pitch;
+	player->control.yaw = yaw;
+	m_player_pos_received = true;
 
 	infostream << "Client got TOCLIENT_MOVE_PLAYER"
 			<< " pos=" << pos

@@ -395,6 +395,8 @@ queue_full_break:
 				<< ": full map send (d=" << d << ") completed after "
 				<< m_map_send_completion_timer << "s, restarting" << std::endl;
 			m_map_send_completion_timer = 0.0f;
+			++m_full_sends;
+			m_full_send_d = d;
 		} else {
 			if (nearest_sent_d != -1)
 				new_nearest_unsent_d = nearest_sent_d;

@@ -614,6 +614,7 @@ void Client::step(float dtime)
 		while (m_mesh_update_manager->getNextResult(r))
 		{
 			num_processed_meshes++;
+			m_meshes_made++;
 
 			if (r.lod) {
 				m_env.getClientMap().setLodMesh(r.p, std::move(r.mesh), r.skirts);
@@ -1906,6 +1907,16 @@ void Client::showUpdateProgressTexture(void *args, float progress)
 		0, shown_progress);
 }
 
+bool Client::meshesDone() const
+{
+	return m_mesh_update_manager->isIdle();
+}
+
+size_t Client::meshesPending() const
+{
+	return m_mesh_update_manager->pending();
+}
+
 void Client::afterContentReceived()
 {
 	infostream<<"Client::afterContentReceived() started"<<std::endl;
@@ -1963,7 +1974,9 @@ void Client::afterContentReceived()
 	if (m_mods_loaded)
 		m_script->on_client_ready(m_env.getLocalPlayer());
 
-	m_rendering_engine->draw_load_screen(wstrgettext("Done!"), guienv, m_tsrc, 0, 100);
+	// the terrain still to load fills the rest of the bar
+	if (g_settings->getS16("loading_terrain_radius") <= 0)
+		m_rendering_engine->draw_load_screen(wstrgettext("Done!"), guienv, m_tsrc, 0, 100);
 	infostream<<"Client::afterContentReceived() done"<<std::endl;
 }
 

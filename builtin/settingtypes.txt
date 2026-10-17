@@ -498,6 +498,14 @@ fps_max_unfocused (FPS when unfocused) int 10 1 4294967295
 #    View distance in nodes.
 viewing_range (Viewing range) int 200 20 4000
 
+#    In singleplayer, the loading screen stays until the terrain in view this many
+#    nodes out (the whole view, if shorter) is loaded and drawn, so the world
+#    doesn't show building itself. 0 enters at once, as before.
+loading_terrain_radius (Terrain loaded before entering) int 0 0 320
+
+#    The longest the loading screen waits for that terrain, in seconds.
+loading_terrain_timeout (Terrain loading timeout) float 30 1 300
+
 #    Undersampling is similar to using a lower screen resolution, but it applies
 #    to the game world only, keeping the GUI intact.
 #    It should give a significant performance boost at the cost of less detailed image.
