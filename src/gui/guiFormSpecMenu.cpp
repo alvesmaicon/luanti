@@ -5458,6 +5458,20 @@ bool GUIFormSpecMenu::OnEvent(const SEvent& event)
 			if (caller_id <= ID_PROCEED_BTN)
 				break;
 
+			// the on-screen keyboard's OK (its element is the box) is the field's Enter only where asked for
+			if (event.GUIEvent.Element && event.GUIEvent.Element == event.GUIEvent.Caller) {
+				bool enter_after_edit = false;
+				for (const FieldSpec &s : m_fields) {
+					if (s.ftype == f_Unknown && s.fid == caller_id) {
+						auto it = field_enter_after_edit.find(s.fname);
+						enter_after_edit = it != field_enter_after_edit.end() && it->second;
+						break;
+					}
+				}
+				if (!enter_after_edit)
+					return true;
+			}
+
 			close_on_enter = true;
 			for (GUIFormSpecMenu::FieldSpec &s : m_fields) {
 				if (s.ftype == f_Unknown &&
