@@ -1242,7 +1242,7 @@ bool CIrrDeviceSDL::run()
 }
 
 #if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
-//! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
+//! A, Y (a shift-click), X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
 bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 {
 	const u32 bit = 1u << static_cast<u32>(button);
@@ -1281,7 +1281,7 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 
 	switch (button) {
 	case GamepadButton::SOUTH:
-	case GamepadButton::NORTH:
+	case GamepadButton::NORTH: // with Shift while held: moves a stack to the other inventory
 		postGamepadClick(SDL_BUTTON_LEFT, down);
 		// a click on a text field opens the on-screen keyboard
 		if (!down && GUIEnvironment)
@@ -1416,6 +1416,7 @@ void CIrrDeviceSDL::postGamepadClick(u32 button, bool down)
 		irrevent.MouseInput.Event = down ? EMIE_RMOUSE_PRESSED_DOWN : EMIE_RMOUSE_LEFT_UP;
 	irrevent.MouseInput.Button = button;
 	irrevent.MouseInput.ButtonStates = MouseButtonStates;
+	irrevent.MouseInput.Shift = GamepadMouseButtons & (1u << static_cast<u32>(GamepadButton::NORTH));
 	irrevent.MouseInput.X = MouseX;
 	irrevent.MouseInput.Y = MouseY;
 	postEventFromUser(irrevent);
@@ -1438,6 +1439,7 @@ void CIrrDeviceSDL::postGamepadWheel(f32 wheel)
 	irrevent.MouseInput.Wheel = wheel;
 	irrevent.MouseInput.Gamepad = true;
 	irrevent.MouseInput.ButtonStates = MouseButtonStates;
+	irrevent.MouseInput.Shift = GamepadMouseButtons & (1u << static_cast<u32>(GamepadButton::NORTH));
 	irrevent.MouseInput.X = MouseX;
 	irrevent.MouseInput.Y = MouseY;
 	postEventFromUser(irrevent);
@@ -1450,6 +1452,7 @@ void CIrrDeviceSDL::postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel)
 	irrevent.MouseInput.Event = event;
 	irrevent.MouseInput.Wheel = wheel;
 	irrevent.MouseInput.ButtonStates = MouseButtonStates;
+	irrevent.MouseInput.Shift = GamepadMouseButtons & (1u << static_cast<u32>(GamepadButton::NORTH));
 	irrevent.MouseInput.X = MouseX;
 	irrevent.MouseInput.Y = MouseY;
 	postEventFromUser(irrevent);
