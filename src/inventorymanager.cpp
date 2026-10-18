@@ -628,7 +628,12 @@ void IMoveAction::clientApply(InventoryManager *mgr, IGameDef *gamedef)
 	InventoryLocation current_player;
 	current_player.setCurrentPlayer();
 	Inventory *inv_player = mgr->getInventory(current_player);
-	if (inv_from != inv_player || inv_to != inv_player)
+	// A node's inventory too: the server sends its metadata and the player's list again after every move
+	// (see Server::handleCommand_InventoryAction), so a guess its callbacks refuse is put right
+	auto predicted = [&](const InventoryLocation &loc, Inventory *inv) {
+		return inv == inv_player || loc.type == InventoryLocation::NODEMETA;
+	};
+	if (!predicted(from_inv, inv_from) || !predicted(to_inv, inv_to))
 		return;
 
 	InventoryList *list_from = inv_from->getList(from_list);
