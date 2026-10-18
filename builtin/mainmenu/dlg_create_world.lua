@@ -162,13 +162,18 @@ local function create_world_formspec(dialogdata)
 				fgettext("Bonus chest"), tostring(dialogdata.bonus_chest))
 	end
 
-	-- a handheld types the name with the gamepad's keyboard (left empty, the next free one), and keeps the
-	-- game's mapgen
+	-- a handheld types the name and the seed with the gamepad's keyboard (left empty, the next free name and
+	-- a random seed), and keeps the game's mapgen
 	if core.settings:get_bool("menu_handheld") then
 		dialogdata.mg = current_mg
+		local name_w = disallowed_mapgen_settings["seed"] and 6 or 2.95
+		local seed = disallowed_mapgen_settings["seed"] and "" or
+			"field[3.8,0.7;3,0.5;te_seed;" .. fgettext("Seed") .. ";" ..
+				core.formspec_escape(dialogdata.seed) .. "]"
 		return "size[7,4.2,true]" ..
-			"field[0.8,0.7;6,0.5;te_world_name;" .. fgettext("World name") .. ";" ..
+			"field[0.8,0.7;" .. name_w .. ",0.5;te_world_name;" .. fgettext("World name") .. ";" ..
 				core.formspec_escape(dialogdata.worldname) .. "]" ..
+			seed ..
 			game_mode(0.5, 1.4, 6) ..
 			"button[0.5,3.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
 			"button[3.5,3.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
