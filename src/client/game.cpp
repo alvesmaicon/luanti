@@ -3080,8 +3080,13 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
 		runData.repeat_place_timer = 0;
 		infostream << "Place button pressed while looking at ground" << std::endl;
 
-		// Placing animation (always shown for feedback)
-		camera->setDigging(1);
+		// Placing animation, but as in Minecraft not for a tool or the hand on a node that
+		// neither opens nor reacts to it
+		auto &def = selected_item.getDefinition(itemdef_manager);
+		const bool opens = !isKeyDown(KeyType::SNEAK) && (nodedef_manager->get(map.getNode(nodepos)).rightclickable ||
+				(meta && !meta->getString("formspec").empty()));
+		if (opens || (def.type != ITEM_TOOL && def.type != ITEM_NONE))
+			camera->setDigging(1);
 
 		soundmaker->m_player_rightpunch_sound = SoundSpec();
 
@@ -3089,7 +3094,6 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
 		// make that happen
 		// And also set the sound and send the interact
 		// But first check for meta formspec and rightclickable
-		auto &def = selected_item.getDefinition(itemdef_manager);
 		bool placed = nodePlacement(def, selected_item, nodepos, neighborpos,
 			pointed, meta);
 
@@ -3635,7 +3639,7 @@ void Game::updateFrame(ProfilerGraph *graph, RunStats *stats, f32 dtime,
 		ItemStack &tool_item = player->getWieldedItem(&selected_item, &hand_item);
 
 		bool skip_anim = client->consumeSkipNextWieldAnimation();
-		camera->wield(tool_item, !skip_anim);
+		camera->wield(tool_item, !skip_anim, selected_item.empty());
 	}
 
 	/*

@@ -314,8 +314,11 @@ void WieldMeshSceneNode::setExtruded(video::ITexture *texture,
 	mesh->drop();
 
 	m_meshnode->setScale(wield_scale * WIELD_SCALE_FACTOR_EXTRUDED);
+	setPixelMaterials();
+}
 
-	// Customize materials
+void WieldMeshSceneNode::setPixelMaterials()
+{
 	for (u32 layer = 0; layer < m_meshnode->getMaterialCount(); layer++) {
 		video::SMaterial &material = m_meshnode->getMaterial(layer);
 		material.TextureLayers[0].TextureWrapU = video::ETC_CLAMP_TO_EDGE;
@@ -435,6 +438,7 @@ void WieldMeshSceneNode::setItem(const ItemStack &item, Client *client, bool che
 	const ContentFeatures &f = ndef->get(def.name);
 	const NodeVisuals &v = *(f.visuals);
 	m_node_mesh = false;
+	m_arm = false;
 
 	{
 		// Initialize material type used by setExtruded
@@ -602,6 +606,67 @@ void WieldMeshSceneNode::setColor(video::SColor c)
 			setMeshBufferColor(buf, buffercolor);
 		}
 	}
+}
+
+void WieldMeshSceneNode::setArm(video::ITexture *skin, IShaderSource *shdsrc)
+{
+	m_node_mesh = false;
+	m_arm = true;
+	u32 shader_id = shdsrc->getShader("object_shader", TILE_MATERIAL_BASIC, NDT_NORMAL);
+	m_material_type = shdsrc->getShaderInfo(shader_id).material;
+	m_buffer_info.clear();
+	m_buffer_info.emplace_back(0);
+	m_base_color = video::SColor(0xFFFFFFFF);
+	if (!skin) {
+		changeToMesh(nullptr);
+		return;
+	}
+
+	// The box from (-3, -2, -2) to (1, 10, 2) pixels, the shoulder at y -2; each face as a corner,
+	// its edges along the skin's u and v, and where it starts in the skin
+	struct Face { v3f corner, u, v; f32 tu, tv; };
+	const Face faces[] = {
+		{{-3, -2, 2}, {0, 0, -4}, {0, 12, 0}, 40, 20}, // outside
+		{{-3, -2, -2}, {4, 0, 0}, {0, 12, 0}, 44, 20}, // front
+		{{1, -2, -2}, {0, 0, 4}, {0, 12, 0}, 48, 20}, // inside
+		{{1, -2, 2}, {-4, 0, 0}, {0, 12, 0}, 52, 20}, // back
+		{{-3, -2, -2}, {4, 0, 0}, {0, 0, 4}, 44, 16}, // shoulder
+		{{-3, 10, -2}, {4, 0, 0}, {0, 0, 4}, 48, 16}, // hand
+	};
+	const core::dimension2d<u32> size = skin->getOriginalSize();
+	const f32 tw = 64, th = 64.0f * size.Height / size.Width;
+	scene::SMeshBuffer *buf = new scene::SMeshBuffer();
+	video::SColor c(0xFFFFFFFF);
+	for (const Face &f : faces) {
+		v3f p[4] = {f.corner, f.corner + f.u, f.corner + f.u + f.v, f.corner + f.v};
+		v2f t[4] = {{f.tu, f.tv}, {f.tu + f.u.getLength(), f.tv},
+				{f.tu + f.u.getLength(), f.tv + f.v.getLength()}, {f.tu, f.tv + f.v.getLength()}};
+		video::S3DVertex vertices[4];
+		// in blocks with z flipped; front faces wind as Irrlicht wants them seen from outside
+		v3f normal = f.u.crossProduct(f.v).normalize();
+		const v3f centre(-1, 4, 0);
+		if (normal.dotProduct(f.corner - centre) < 0)
+			normal = -normal;
+		for (int i = 0; i < 4; i++) {
+			const v3f q = p[i] / 16.0f;
+			vertices[i] = video::S3DVertex(q.X, q.Y, -q.Z, normal.X, normal.Y, -normal.Z, c,
+					t[i].X / tw, t[i].Y / th);
+		}
+		const v3f a = vertices[1].Pos - vertices[0].Pos, b = vertices[2].Pos - vertices[0].Pos;
+		const bool outward = a.crossProduct(b).dotProduct(vertices[0].Normal) > 0;
+		const u16 indices[6] = {0, 1, 2, 2, 3, 0}, reversed[6] = {0, 3, 2, 2, 1, 0};
+		buf->append(vertices, 4, outward ? indices : reversed, 6);
+	}
+	buf->getMaterial().setTexture(0, skin);
+	scene::SMesh *mesh = new scene::SMesh();
+	mesh->addMeshBuffer(buf);
+	buf->drop();
+	mesh->recalculateBoundingBox();
+	changeToMesh(mesh);
+	mesh->drop();
+	m_meshnode->setScale(v3f(WIELD_SCALE_FACTOR_EXTRUDED / 0.68f));
+	setPixelMaterials();
+	setColor(m_base_color);
 }
 
 void WieldMeshSceneNode::setLightColorAndAnimation(video::SColor color, float animation_time)

@@ -136,6 +136,11 @@ public:
 	// Drawn as the node itself (a cube...), not as an extruded image
 	bool isNodeMesh() const { return m_node_mesh; }
 
+	// Minecraft's first person arm: the right arm of a skin (64x32 or 64x64) on a box of
+	// 4x12x4 pixels, in blocks of WIELD_SCALE_FACTOR_EXTRUDED / 0.68 units, z flipped
+	void setArm(video::ITexture *skin, IShaderSource *shdsrc);
+	bool isArm() const { return m_arm; }
+
 	virtual void render();
 
 	virtual const aabb3f &getBoundingBox() const { return m_bounding_box; }
@@ -145,10 +150,12 @@ private:
 			v3f wield_scale);
 
 	void changeToMesh(scene::IMesh *mesh);
+	void setPixelMaterials();
 
 	// Child scene node with the current wield mesh
 	scene::IMeshSceneNode *m_meshnode = nullptr;
 	bool m_node_mesh = false;
+	bool m_arm = false;
 	// Material types used as fallback
 	video::E_MATERIAL_TYPE m_material_type;
 

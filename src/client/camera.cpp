@@ -10,6 +10,7 @@
 #include <cmath>
 #include "client/renderingengine.h"
 #include "client/content_cao.h"
+#include "client/texturesource.h"
 #include "settings.h"
 #include "wieldmesh.h"
 #include "noise.h"         // easeCurve
@@ -34,11 +35,49 @@ static constexpr f32 CAMERA_OFFSET_STEP = 200;
 #define WIELDMESH_AMPLITUDE_X 7.0f
 #define WIELDMESH_AMPLITUDE_Y 10.0f
 
+// The wield scene's vertical FOV: Minecraft's 70 degrees for the hand, as wide as on 16:9 on narrower screens
+static f32 wield_fov_y(f32 aspect)
+{
+	return 2 * std::atan(std::tan(35.0f * core::DEGTORAD) * std::max(1.0f, 16.0f / 9.0f / aspect));
+}
+
+static core::matrix4 rotation(f32 x, f32 y, f32 z)
+{
+	core::matrix4 m;
+	m.setRotationDegrees(v3f(x, y, z));
+	return m;
+}
+
+static core::matrix4 translation(f32 x, f32 y, f32 z)
+{
+	core::matrix4 m;
+	m.setTranslation(v3f(x, y, z));
+	return m;
+}
+
+// Minecraft is right-handed, looking down -z; Irrlicht left-handed, looking down +z
+static core::matrix4 flip_z(core::matrix4 m)
+{
+	for (int i = 0; i < 4; i++) {
+		m[i * 4 + 2] = -m[i * 4 + 2];
+		m[8 + i] = -m[8 + i];
+	}
+	return m;
+}
+
+// The skin of the local player's model, for the arm
+static std::string arm_skin(Client *client)
+{
+	GenericCAO *cao = client->getEnv().getLocalPlayer()->getCAO();
+	if (cao && !cao->getProperties().textures.empty())
+		return cao->getProperties().textures[0];
+	return "character.png";
+}
+
 static const char *setting_names[] = {
 	"view_bobbing_amount", "fov", "arm_inertia",
 	"show_nametag_backgrounds", "offhand_position", "offhand_rotation",
 	"offhand_raised_position", "offhand_raised_rotation",
-	"wield_position", "wield_rotation", "wield_node_position", "wield_node_rotation",
 };
 
 Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *rendering_engine):
@@ -96,10 +135,6 @@ void Camera::readSettings()
 	m_offhand_rotation[0] = g_settings->getV3F("offhand_rotation").value_or(v3f(0, -25, 0));
 	m_offhand_position[1] = g_settings->getV3F("offhand_raised_position").value_or(v3f(-22, -18, 50));
 	m_offhand_rotation[1] = g_settings->getV3F("offhand_raised_rotation").value_or(v3f(0, 10, 0));
-	m_wield_position[0] = g_settings->getV3F("wield_position").value_or(v3f(55, -35, 65));
-	m_wield_rotation[0] = g_settings->getV3F("wield_rotation").value_or(v3f(-100, 120, -100));
-	m_wield_position[1] = g_settings->getV3F("wield_node_position").value_or(v3f(55, -35, 65));
-	m_wield_rotation[1] = g_settings->getV3F("wield_node_rotation").value_or(v3f(-100, 120, -100));
 }
 
 Camera::~Camera()
@@ -196,13 +231,15 @@ void Camera::step(f32 dtime)
 	}
 
 	if (m_digging_button != -1) {
-		f32 offset = dtime * 3.5f;
+		// A swing takes 0.3 s; one that goes on digging snaps back in 0.05 s
+		f32 offset = dtime * (m_digging_snap ? 10.0f : 1.0f / 0.3f);
 		float m_digging_anim_was = m_digging_anim;
 		m_digging_anim += offset;
 		if (m_digging_anim >= 1)
 		{
 			m_digging_anim = 0;
 			m_digging_button = -1;
+			m_digging_snap = false;
 		}
 		float lim = 0.15;
 		if(m_digging_anim_was < lim && m_digging_anim >= lim)
@@ -519,50 +556,51 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 	if (m_arm_inertia)
 		addArmInertia(yaw);
 
-	// Position the wielded item: its rest pose, with the arm's inertia around it
-	const int pose = m_wieldnode->isNodeMesh() ? 1 : 0;
-	v3f wield_position = m_wield_position[pose] + v3f(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X,
-			m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
-	v3f wield_rotation = m_wield_rotation[pose];
-	wield_position.Y += std::abs(m_wield_change_timer)*320 - 40;
-	if(m_digging_anim < 0.05 || m_digging_anim > 0.5)
-	{
-		f32 frac = 1.0;
-		if(m_digging_anim > 0.5)
-			frac = 2.0 * (m_digging_anim - 0.5);
-		// This value starts from 1 and settles to 0
-		f32 ratiothing = std::pow((1.0f - tool_reload_ratio), 0.5f);
-		f32 ratiothing2 = (easeCurve(ratiothing*0.5))*2.0;
-		wield_position.Y -= frac * 25.0f * std::pow(ratiothing2, 1.7f);
-		wield_position.X -= frac * 35.0f * std::pow(ratiothing2, 1.1f);
-		wield_rotation.Y += frac * 70.0f * std::pow(ratiothing2, 1.4f);
-	}
-	if (m_digging_button != -1)
-	{
-		f32 digfrac = m_digging_anim;
-		wield_position.X -= 50 * std::sin(std::pow(digfrac, 0.8f) * M_PI);
-		wield_position.Y += 24 * std::sin(digfrac * 1.8 * M_PI);
-		wield_position.Z += 25 * 0.5;
-
-		// Euler angles are PURE EVIL, so why not use quaternions?
-		// The swing turns the item from its rest pose as it turns the default one to (80, 30, 100)
-		core::quaternion quat_begin(wield_rotation * core::DEGTORAD);
-		core::quaternion swing(v3f(-100, 120, -100) * core::DEGTORAD);
-		swing.makeInverse();
-		swing = swing * core::quaternion(v3f(80, 30, 100) * core::DEGTORAD);
-		core::quaternion quat_end = quat_begin * swing;
-		core::quaternion quat_slerp;
-		quat_slerp.slerp(quat_begin, quat_end, std::sin(digfrac * M_PI));
-		quat_slerp.toEuler(wield_rotation);
-		wield_rotation *= core::RADTODEG;
+	// The wielded item or the empty arm as Minecraft draws them in first person
+	// (ItemInHandRenderer, and the item models' firstperson_righthand display), in blocks of
+	// 75 units for a node mesh (30 units at Minecraft's scale 0.4) and 40 / 0.68 otherwise (an
+	// extruded image is 40 units at 0.68); the punch reload lowers the arm by up to 0.6 block
+	const bool node = m_wieldnode->isNodeMesh();
+	const f32 block = node ? 75.0f : 40.0f / 0.68f;
+	const f32 step = 8.0f * frametime;
+	m_wield_height += rangelim(std::pow(tool_reload_ratio, 3.0f) - m_wield_height, -step, step);
+	const f32 lower = 0.6f * (1.0f - m_wield_height);
+	const f32 p = m_digging_button != -1 ? m_digging_anim : 0.0f;
+	const f32 s = std::sin(std::sqrt(p) * M_PI), s2 = std::sin(std::sqrt(p) * 2 * M_PI);
+	const f32 sp = std::sin(p * M_PI), spp = std::sin(p * p * M_PI);
+	core::matrix4 m;
+	if (m_wieldnode->isArm()) {
+		m = translation(-0.3f * s + 0.64f, 0.4f * s2 - 0.6f - lower, -0.4f * sp - 0.72f) *
+				rotation(0, 45 + 70 * s, 0) * rotation(0, 0, -20 * spp) *
+				translation(-1, 3.6f, 3.5f) * rotation(0, 0, 120) * rotation(200, 0, 0) *
+				rotation(0, -135, 0) * translation(5.6f, 0, 0) * translation(-5 / 16.0f, 2 / 16.0f, 0);
 	} else {
+		m = translation(-0.4f * s, 0.2f * s2, -0.2f * sp) *
+				translation(0.56f, -0.52f - lower, -0.72f) *
+				rotation(0, 45 - 20 * spp, 0) * rotation(0, 0, -20 * s) * rotation(-80 * s, 0, 0) *
+				rotation(0, -45, 0);
+		if (node)
+			m = m * rotation(0, 45, 0);
+		else
+			m = m * translation(1.13f / 16, 3.2f / 16, 1.13f / 16) * rotation(0, -90, 0) * rotation(0, 0, 25);
+	}
+	m = flip_z(m);
+	v3f wield_position = m.getTranslation() * block +
+			v3f(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X, m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
+	const v3f wield_rotation = m.getRotationDegrees();
+	wield_position.Y += std::abs(m_wield_change_timer)*320 - 40;
+	if (m_digging_button == -1) {
 		f32 bobfrac = my_modf(m_view_bobbing_anim);
 		wield_position.X -= std::sin(bobfrac*M_PI*2.0) * 3.0;
 		wield_position.Y += std::sin(my_modf(bobfrac*2.0)*M_PI) * 3.0;
 	}
+	// an item is a pixel thick in Minecraft, a tenth of its size in the extruded mesh
+	m_wieldnode->setScale(v3f(1, 1, node || m_wieldnode->isArm() ? 1 : 0.625f));
 	m_wieldnode->setPosition(wield_position);
 	m_wieldnode->setRotation(wield_rotation);
 
+	if (m_wieldnode->isArm() && arm_skin(m_client) != m_arm_skin)
+		updateWieldedTool();
 	m_player_light_color = player->light_color;
 	m_wieldnode->setLightColorAndAnimation(m_player_light_color,
 			m_client->getAnimationTime());
@@ -617,14 +655,17 @@ void Camera::setDigging(s32 button)
 	} else if (m_digging_button == -1) {
 		// Any other action.
 		m_digging_button = button;
+	} else if (m_digging_button == 0 && m_digging_anim >= 0.5f) {
+		m_digging_snap = true;
 	}
 }
 
-void Camera::wield(const ItemStack &item, bool animate)
+void Camera::wield(const ItemStack &item, bool animate, bool arm)
 {
 	if (item.name != m_wield_item_next.name ||
-			item.metadata != m_wield_item_next.metadata) {
+			item.metadata != m_wield_item_next.metadata || arm != m_wield_arm_next) {
 		m_wield_item_next = item;
+		m_wield_arm_next = arm;
 
 		if (!animate) {
 			updateWieldedTool();
@@ -646,7 +687,7 @@ void Camera::drawWieldedTool(core::matrix4* translation)
 	// Draw the wielded node (in a separate scene manager)
 	scene::ICameraSceneNode* cam = m_wieldmgr->getActiveCamera();
 	cam->setAspectRatio(m_cameranode->getAspectRatio());
-	cam->setFOV(72.0*M_PI/180.0);
+	cam->setFOV(wield_fov_y(m_cameranode->getAspectRatio()));
 	cam->setNearValue(10);
 	cam->setFarValue(1000);
 	if (translation != NULL)
@@ -822,6 +863,8 @@ void Camera::updateOffhand(LocalPlayer *player, f32 frametime)
 		pos.X += std::sin(bobfrac * M_PI * 2.0) * 3.0;
 		pos.Y += std::sin(my_modf(bobfrac * 2.0) * M_PI) * 3.0;
 	}
+	// its poses were set under a fixed 72 degree FOV: as near as keeps it the same on screen
+	pos.Z *= std::tan(36.0f * core::DEGTORAD) / std::tan(wield_fov_y(m_aspect) / 2);
 	m_offhand_node->setPosition(pos);
 	m_offhand_node->setRotation(rot);
 	m_offhand_node->setLightColorAndAnimation(m_player_light_color, m_client->getAnimationTime());
@@ -829,6 +872,13 @@ void Camera::updateOffhand(LocalPlayer *player, f32 frametime)
 
 void Camera::updateWieldedTool()
 {
-	m_wieldnode->setItem(m_wield_item_next, m_client);
+	// An empty hand is Minecraft's arm with the player's skin
+	if (m_wield_arm_next) {
+		m_arm_skin = arm_skin(m_client);
+		m_wieldnode->setArm(m_client->getTextureSource()->getTexture(m_arm_skin),
+				m_client->getShaderSource());
+	} else {
+		m_wieldnode->setItem(m_wield_item_next, m_client);
+	}
 	m_wieldnode->setLightColorAndAnimation(m_player_light_color, m_client->getAnimationTime());
 }
