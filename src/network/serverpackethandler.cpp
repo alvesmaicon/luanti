@@ -1079,11 +1079,11 @@ void Server::handleCommand_Interact(NetworkPacket *pkt)
 			DigParams params = getDigParams(m_nodedef->get(n).groups,
 					&tool_item.getToolCapabilities(m_itemdef, &hand_item),
 					tool_item.wear);
-			// If can't dig, try hand
-			if (!params.diggable) {
-				params = getDigParams(m_nodedef->get(n).groups,
+			// If can't dig, or the hand digs faster (a creative hand), use the hand
+			const DigParams hand_params = getDigParams(m_nodedef->get(n).groups,
 					&hand_item.getToolCapabilities(m_itemdef));
-			}
+			if (!params.diggable || (hand_params.diggable && hand_params.time < params.time))
+				params = hand_params;
 			// If can't dig, ignore dig
 			if (!params.diggable) {
 				infostream << "Server: " << player->getName()
