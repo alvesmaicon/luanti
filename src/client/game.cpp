@@ -3393,11 +3393,11 @@ void Game::handleDigging(const PointedThing &pointed, const v3s16 &nodepos,
 			&tool_item.getToolCapabilities(itemdef_manager, &hand_item),
 			tool_item.wear);
 
-	// If can't dig, try hand
-	if (!params.diggable) {
-		params = getDigParams(features.groups,
-				&hand_item.getToolCapabilities(itemdef_manager));
-	}
+	// If can't dig, or the hand digs faster (a creative hand), use the hand
+	const DigParams hand_params = getDigParams(features.groups,
+			&hand_item.getToolCapabilities(itemdef_manager));
+	if (!params.diggable || (hand_params.diggable && hand_params.time < params.time))
+		params = hand_params;
 
 	if (!params.diggable) {
 		// I guess nobody will wait for this long
@@ -3457,15 +3457,8 @@ void Game::handleDigging(const PointedThing &pointed, const v3s16 &nodepos,
 		if (g_settings->getBool("safe_dig_and_place"))
 			runData.digging_blocked = true;
 
-		runData.nodig_delay_timer =
-				runData.dig_time_complete / (float)crack_animation_length;
-
-		// We don't want a corresponding delay to very time consuming nodes
-		// and nodes without digging time (e.g. torches) get a fixed delay.
-		if (runData.nodig_delay_timer > 0.3f)
-			runData.nodig_delay_timer = 0.3f;
-		else if (runData.dig_instantly)
-			runData.nodig_delay_timer = 0.15f;
+		// As in Minecraft, the next node is dug 0.25 s (5 ticks) after one breaks
+		runData.nodig_delay_timer = 0.25f;
 
 		// Ensure that the delay between breaking nodes
 		// (dig_time_complete + nodig_delay_timer) is at least the
@@ -3497,7 +3490,12 @@ void Game::handleDigging(const PointedThing &pointed, const v3s16 &nodepos,
 	}
 
 	if (runData.dig_time_complete < 100000.0) {
-		runData.dig_time += dtime;
+		// As in Minecraft, five times slower off the ground and five times slower with the head in water
+		f32 slowdown = player->touching_ground ? 1.0f : 5.0f;
+		const MapNode eye = map.getNode(floatToInt(player->getEyePosition(), BS));
+		if (itemgroup_get(nodedef_manager->get(eye).groups, "water") > 0)
+			slowdown *= 5.0f;
+		runData.dig_time += dtime / slowdown;
 	} else {
 		runData.dig_time = 0;
 		client->setCrack(-1, nodepos);
