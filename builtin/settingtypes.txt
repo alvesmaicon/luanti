@@ -542,14 +542,6 @@ offhand_rotation (Off-hand rotation) v3f (0, -25, 0)
 offhand_raised_position (Raised off-hand position) v3f (-22, -18, 50)
 offhand_raised_rotation (Raised off-hand rotation) v3f (0, 10, 0)
 
-#    Where the wielded item is held in first person, at rest: position and
-#    rotation in degrees, for an item drawn as an image and for a node drawn
-#    as itself (a cube). Digging swings it from there.
-wield_position (Wielded item position) v3f (55, -35, 65)
-wield_rotation (Wielded item rotation) v3f (-100, 120, -100)
-wield_node_position (Wielded node position) v3f (55, -35, 65)
-wield_node_rotation (Wielded node rotation) v3f (-100, 120, -100)
-
 #    Enable view bobbing and amount of view bobbing.
 #    For example: 0 for no view bobbing; 1.0 for normal; 2.0 for double.
 view_bobbing_amount (View bobbing factor) float 1.0 0.0 7.9

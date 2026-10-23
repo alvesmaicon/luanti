@@ -151,7 +151,8 @@ public:
 	void setDigging(s32 button);
 
 	// Replace the wielded item mesh
-	void wield(const ItemStack &item, bool animate = true);
+	// arm: the hand is empty, drawn as Minecraft's arm
+	void wield(const ItemStack &item, bool animate = true, bool arm = false);
 
 	// Draw the wielded tool.
 	// This has to happen *after* the main scene is drawn.
@@ -206,9 +207,6 @@ private:
 	// lowered and raised
 	v3f m_offhand_position[2];
 	v3f m_offhand_rotation[2];
-	// The wielded item's rest pose: an extruded image, and a node drawn as itself
-	v3f m_wield_position[2];
-	v3f m_wield_rotation[2];
 
 	// draw control
 	MapDrawControl& m_draw_control;
@@ -261,10 +259,16 @@ private:
 	// If 0, left-click digging animation
 	// If 1, right-click digging animation
 	s32 m_digging_button = -1;
+	// The swing passed its half while still digging: it snaps back to start again
+	bool m_digging_snap = false;
+	// Height of the wielded item after a punch, 0 (lowered) to 1, as the punch reloads
+	f32 m_wield_height = 1.0f;
 
 	// Animation when changing wielded item
 	f32 m_wield_change_timer = 0.125f;
 	ItemStack m_wield_item_next;
+	bool m_wield_arm_next = false;
+	std::string m_arm_skin;
 
 	CameraMode m_camera_mode;
 
