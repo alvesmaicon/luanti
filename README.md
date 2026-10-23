@@ -57,7 +57,9 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 | Blocks in the inventory and the HUD hotbar take slices of the depth range instead of a depth clear each, which on lima submitted the whole frame once per block (inventory page of blocks: 138 to 33 ms a frame on the A33; in game, with a hotbar of blocks, 33 to 25 ms) | |
 | The HUD (hotbar, status bars, crosshair) isn't drawn under a menu, which on a small screen covers most of it | |
 | The first item of an `offhand` inventory list is held in the left hand in first person, lowered or raised by its meta field `raised` (a shield) | `offhand_position`, `offhand_rotation`, `offhand_raised_position`, `offhand_raised_rotation` |
-| The wielded item's rest pose is a setting, with its own for blocks drawn as nodes (the handheld poses them as Minecraft does at 640x480) | `wield_position`, `wield_rotation`, `wield_node_position`, `wield_node_rotation` |
+| The wielded item is posed and swung as Minecraft draws it in first person, and an empty hand is its arm, a box with the player's skin; the hand's FOV is Minecraft's, as wide on 4:3 as on 16:9 | |
+| Digging repeats the first half of the swing, every 0.2 s, and after a punch the item drops and rises as the punch reloads, as in Minecraft | |
+| Place swings the hand only when something happens, as in Minecraft: a node placed, or one that opens or reacts | |
 
 Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
 
