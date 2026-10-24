@@ -61,6 +61,7 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 | Digging repeats the first half of the swing, every 0.2 s, and after a punch the item drops and rises as the punch reloads, as in Minecraft | |
 | Place swings the hand only when something happens, as in Minecraft: a node placed, or one that opens or reacts | |
 | Digging as in Minecraft: the next node 0.25 s after one breaks, five times slower off the ground and five times slower with the head in water, and the hand used when it digs faster than the tool (a creative hand) | |
+| Water moves the player as in Minecraft: 1.95 m/s under water and 2.3 at the surface (it was 2.7, and 5.8 running), Minecraft's swimming as the physics override `swim` (faster, up or down where the player looks), a wall pushed on lifts the player out, flowing water pushes, and a landing in water does no damage | |
 
 Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
 
