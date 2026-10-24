@@ -64,6 +64,12 @@ public:
 
 	f32 gravity = 0; // total downwards acceleration
 
+	// Minecraft's jump and air (see localplayer.cpp)
+	f32 getAirSpeed(f32 per_tick) const;
+	f32 getJumpSpeed() const;
+	f32 getAirGravity(f32 dtime) const;
+	f32 getFallHeight(f32 speed) const;
+
 	void move(f32 dtime, Environment *env);
 	void move(f32 dtime, Environment *env,
 			std::vector<CollisionInfo> *collision_info);
@@ -202,6 +208,8 @@ private:
 	// ***** End of variables for temporary option *****
 
 	bool m_can_jump = false;
+	// Minecraft's wait before the next jump while jump is held
+	f32 m_jump_delay = 0.0f;
 	// Airborne since the water moved the player
 	bool m_water_air = false;
 	// The water's current, a push per Minecraft tick
