@@ -14,6 +14,7 @@ class ClientActiveObject;
 class Environment;
 class GenericCAO;
 class Map;
+class NodeDefManager;
 struct CollisionInfo;
 struct CollisionMoveResult;
 
@@ -56,6 +57,10 @@ public:
 	bool is_climbing = false;
 	bool swimming_vertical = false;
 	bool swimming_pitch = false;
+	// Minecraft's water (nodes of the group water): how deep the box is in it,
+	// and whether it moves the player (not flying or climbing)
+	f32 water_depth = 0.0f;
+	bool water_move = false;
 
 	f32 gravity = 0; // total downwards acceleration
 
@@ -164,6 +169,9 @@ private:
 		const f32 max_increase_V, const bool use_pitch);
 	bool updateSneakNode(Map *map, const v3f &position, const v3f &sneak_max);
 	float getSlipFactor(Environment *env, const v3f &speedH);
+	void updateWater(Map *map, const NodeDefManager *nodemgr, const v3f &position);
+	void applyWaterControl(float dtime, Environment *env);
+	void applyWaterAirControl(float dtime);
 	void old_move(f32 dtime, Environment *env,
 			std::vector<CollisionInfo> *collision_info);
 	void handleAutojump(f32 dtime, Environment *env,
@@ -194,6 +202,10 @@ private:
 	// ***** End of variables for temporary option *****
 
 	bool m_can_jump = false;
+	// Airborne since the water moved the player
+	bool m_water_air = false;
+	// The water's current, a push per Minecraft tick
+	v3f m_water_current;
 	bool m_disable_jump = false;
 	bool m_disable_descend = false;
 	u16 m_breath = PLAYER_MAX_BREATH_DEFAULT;

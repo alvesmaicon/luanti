@@ -337,6 +337,8 @@ std::string PlayerSAO::generateUpdatePhysicsOverrideCommand() const
 	writeF32(os, phys.speed_fast);
 	writeF32(os, phys.acceleration_fast);
 	writeF32(os, phys.speed_walk);
+	// handheld fork
+	writeU8(os, phys.swim);
 	return os.str();
 }
 

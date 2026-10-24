@@ -9354,6 +9354,8 @@ You **must not** mix names and track numbers to refer to the same animation.
           (default: `false`)
         * `new_move`: use new move/sneak code. When `false` the exact old code
           is used for the specific old sneak behavior (default: `true`)
+        * `swim`: Minecraft's swimming in nodes of the group `water`: faster,
+          without sinking, up or down where the player looks (default: `false`)
     * Note: All numeric fields above modify a corresponding `movement_*` setting.
     * For games, we recommend for simpler code to first modify the `movement_*`
       settings (e.g. via the game's `minetest.conf`) to set a global base value
