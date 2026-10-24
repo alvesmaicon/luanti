@@ -1746,6 +1746,10 @@ void GenericCAO::processMessage(const std::string &data)
 			phys.speed_walk        = readF32(is);
 		}
 
+		// handheld fork
+		if (canRead(is))
+			phys.swim = readU8(is);
+
 		if (m_is_local_player) {
 			m_env->getLocalPlayer()->physics_override = phys;
 		}

@@ -124,9 +124,9 @@ void ClientEnvironment::step(float dtime)
 		// Control local player
 		lplayer->applyControl(dtime_part, this);
 
-		// Apply physics
+		// Apply physics (Minecraft's water has its own, in applyControl)
 		lplayer->gravity = 0;
-		if (!free_move) {
+		if (!free_move && !lplayer->water_move) {
 			// Gravity
 			if (!is_climbing && !lplayer->in_liquid)
 				// HACK the factor 2 for gravity is arbitrary and should be removed eventually

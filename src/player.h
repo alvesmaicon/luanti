@@ -118,6 +118,8 @@ struct PlayerPhysicsOverride
 	float speed_fast = 1.f;
 	float acceleration_fast = 1.f;
 	float speed_walk = 1.f;
+	// Minecraft's swimming in nodes of the group water
+	bool swim = false;
 
 	bool operator==(const PlayerPhysicsOverride &other) const;
 	bool operator!=(const PlayerPhysicsOverride &other) const {
