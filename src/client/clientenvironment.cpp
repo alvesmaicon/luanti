@@ -178,6 +178,10 @@ void ClientEnvironment::step(float dtime)
 		*/
 
 		lplayer->move(dtime_part, this, &player_collisions);
+
+		// As in Minecraft, water ends a fall: landing in it does no damage
+		if (lplayer->water_depth > 0.0f)
+			player_collisions.clear();
 	}
 
 	bool player_immortal = false;
