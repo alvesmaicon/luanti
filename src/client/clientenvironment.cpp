@@ -127,10 +127,9 @@ void ClientEnvironment::step(float dtime)
 		// Apply physics (Minecraft's water has its own, in applyControl)
 		lplayer->gravity = 0;
 		if (!free_move && !lplayer->water_move) {
-			// Gravity
+			// Gravity, Minecraft's air
 			if (!is_climbing && !lplayer->in_liquid)
-				// HACK the factor 2 for gravity is arbitrary and should be removed eventually
-				lplayer->gravity = 2 * lplayer->movement_gravity * lplayer->physics_override.gravity;
+				lplayer->gravity = lplayer->getAirGravity(dtime_part);
 
 			// Liquid floating / sinking
 			if (!is_climbing && lplayer->in_liquid &&
@@ -204,8 +203,7 @@ void ClientEnvironment::step(float dtime)
 		// Get rid of other components
 		speed_diff.X = 0;
 		speed_diff.Z = 0;
-		f32 pre_factor = 1; // 1 hp per node/s
-		f32 tolerance = BS*14; // 5 without damage
+		f32 pre_factor = 1;
 		if (info.type == COLLISION_NODE) {
 			const ContentFeatures &f = m_client->ndef()->
 				get(m_map->getNode(info.node_p));
@@ -216,11 +214,12 @@ void ClientEnvironment::step(float dtime)
 			// combine both player fall damage modifiers
 			pre_factor = node_fall_factor * player_fall_factor;
 		}
-		float speed = pre_factor * speed_diff.getLength();
+		// As in Minecraft: a point for each node of the fall beyond 3, times the modifiers
+		f32 damage_f = (lplayer->getFallHeight(speed_diff.getLength()) - 3.0f) * pre_factor;
 
-		if (speed > tolerance && !player_immortal && pre_factor > 0.0f) {
-			f32 damage_f = (speed - tolerance) / BS;
-			u16 damage = (u16)MYMIN(damage_f + 0.5, U16_MAX);
+		if (damage_f > 0.0f && !player_immortal && pre_factor > 0.0f) {
+			// less than a hundredth of a node over is the integration's, not the fall's
+			u16 damage = (u16)MYMIN(std::ceil(damage_f - 0.01f), U16_MAX);
 			if (damage != 0) {
 				damageLocalPlayer(damage, true);
 				m_client->getEventManager()->put(
