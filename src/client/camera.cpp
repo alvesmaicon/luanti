@@ -107,6 +107,15 @@ static f32 map_tilt(f32 pitch)
 	return -std::cos(f * M_PI) * 0.5f + 0.5f;
 }
 
+// Minecraft's walking bob, in its view space and blocks (GameRenderer.bobView): d is the distance
+// walked (times 0.6), b how strong the bob is
+static core::matrix4 bob_view(f32 d, f32 b)
+{
+	const f32 a = -d * M_PI;
+	return translation(std::sin(a) * b * 0.5f, -std::abs(std::cos(a) * b), 0) *
+			rotation(0, 0, std::sin(a) * b * 3) * rotation(std::abs(std::cos(a - 0.2f) * b) * 5, 0, 0);
+}
+
 // From a map's pixels (128 a side, y down) to the map in hand (renderMap)
 static core::matrix4 map_pixels()
 {
@@ -229,60 +238,8 @@ void Camera::notifyFovChange()
 	}
 }
 
-// Returns the fractional part of x
-inline f32 my_modf(f32 x)
-{
-	float dummy;
-	return std::modf(x, &dummy);
-}
-
 void Camera::step(f32 dtime)
 {
-	bool was_under_zero = m_wield_change_timer < 0;
-	m_wield_change_timer = MYMIN(m_wield_change_timer + dtime, 0.125);
-
-	// swapped by the next update(), which poses it before it is drawn
-	if (m_wield_change_timer >= 0 && was_under_zero)
-		m_wield_swap = true;
-
-	if (m_view_bobbing_state != 0)
-	{
-		//f32 offset = dtime * m_view_bobbing_speed * 0.035;
-		f32 offset = dtime * m_view_bobbing_speed * 0.030;
-		if (m_view_bobbing_state == 2) {
-			// Animation is getting turned off
-			if (m_view_bobbing_anim < 0.25) {
-				m_view_bobbing_anim -= offset;
-			} else if (m_view_bobbing_anim > 0.75) {
-				m_view_bobbing_anim += offset;
-			} else if (m_view_bobbing_anim < 0.5) {
-				m_view_bobbing_anim += offset;
-				if (m_view_bobbing_anim > 0.5)
-					m_view_bobbing_anim = 0.5;
-			} else {
-				m_view_bobbing_anim -= offset;
-				if (m_view_bobbing_anim < 0.5)
-					m_view_bobbing_anim = 0.5;
-			}
-
-			if (m_view_bobbing_anim <= 0 || m_view_bobbing_anim >= 1 ||
-					fabs(m_view_bobbing_anim - 0.5) < 0.01) {
-				m_view_bobbing_anim = 0;
-				m_view_bobbing_state = 0;
-			}
-		}
-		else {
-			float was = m_view_bobbing_anim;
-			m_view_bobbing_anim = my_modf(m_view_bobbing_anim + offset);
-			bool step = (was == 0 ||
-					(was < 0.5f && m_view_bobbing_anim >= 0.5f) ||
-					(was > 0.5f && m_view_bobbing_anim <= 0.5f));
-			if(step) {
-				m_client->getEventManager()->put(new SimpleTriggerEvent(MtEvent::VIEW_BOBBING_STEP));
-			}
-		}
-	}
-
 	if (m_digging_button != -1) {
 		// A swing takes 0.3 s; one that goes on digging snaps back in 0.05 s
 		f32 offset = dtime * (m_digging_snap ? 10.0f : 1.0f / 0.3f);
@@ -488,22 +445,40 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 	v3f rel_cam_target = v3f(0,0,1);
 	v3f rel_cam_up = v3f(0,1,0);
 
-	if (m_cache_view_bobbing_amount != 0.0f && m_view_bobbing_anim != 0.0f &&
-		m_camera_mode < CAMERA_MODE_THIRD) {
-		f32 bobfrac = my_modf(m_view_bobbing_anim * 2);
-		f32 bobdir = (m_view_bobbing_anim < 0.5) ? 1.0 : -1.0;
+	// Minecraft's walking bob (Player.updateBob, LocalPlayer.move): the distance walked sets its
+	// steps, the speed on the ground how strong it is, eased by 0.4 a tick. Footsteps sound at
+	// the same pace (Entity.moveDist), counting the climb on a ladder. Teleports don't count
+	const v3f &speed = player->getSpeed();
+	const v3f walk_pos = player->getPosition();
+	const v3f moved = m_walk_pos ? (walk_pos - *m_walk_pos) / BS : v3f();
+	m_walk_pos = walk_pos;
+	const bool teleport = moved.getLength() > 4.0f;
+	const f32 walked = teleport ? 0.0f : std::hypot(moved.X, moved.Z);
+	const bool movement_XZ = std::hypot(speed.X, speed.Z) > BS;
+	const bool movement_Y = std::abs(speed.Y) > BS;
+	const bool walking = movement_XZ && player->touching_ground;
+	const bool swimming = (movement_XZ || player->swimming_vertical) && player->in_liquid;
+	const bool climbing = movement_Y && player->is_climbing;
+	const bool flying = g_settings->getBool("free_move") && m_client->checkLocalPrivilege("fly");
+	const f32 stepped = teleport ? 0.0f : player->is_climbing ? moved.getLength() : walked;
+	if ((walking || swimming || climbing) && !flying &&
+			std::floor(m_step_dist + 0.6f * stepped) > std::floor(m_step_dist))
+		m_client->getEventManager()->put(new SimpleTriggerEvent(MtEvent::VIEW_BOBBING_STEP));
+	m_step_dist += 0.6f * stepped;
+	m_walk_dist += 0.6f * walked;
+	const f32 bob_to = player->touching_ground && player->hp > 0 ?
+			std::min(0.1f, std::hypot(speed.X, speed.Z) / BS / 20) : 0.0f;
+	m_bob = player->getParent() ? 0.0f : m_bob + (bob_to - m_bob) * (1 - std::pow(0.6f, 20 * frametime));
+	const core::matrix4 bob = bob_view(m_walk_dist, m_bob * m_cache_view_bobbing_amount);
 
-		f32 bobknob = 1.2;
-		f32 bobtmp = std::sin(std::pow(bobfrac, bobknob) * M_PI);
-
-		v3f bobvec = v3f(
-			0.3 * bobdir * std::sin(bobfrac * M_PI),
-			-0.28 * bobtmp * bobtmp,
-			0.);
-
-		rel_cam_pos += bobvec * m_cache_view_bobbing_amount;
-		rel_cam_target += bobvec * m_cache_view_bobbing_amount;
-		rel_cam_up.rotateXYBy(-0.03 * bobdir * bobtmp * M_PI * m_cache_view_bobbing_amount);
+	// it moves the view, as if the camera moved the other way
+	if (m_cache_view_bobbing_amount != 0.0f && m_camera_mode < CAMERA_MODE_THIRD) {
+		core::matrix4 back;
+		bob.getInverse(back);
+		back = flip_z(back);
+		rel_cam_pos = back.getTranslation() * BS;
+		rel_cam_target = rel_cam_pos + back.rotateAndScaleVect(rel_cam_target);
+		rel_cam_up = back.rotateAndScaleVect(rel_cam_up);
 	}
 
 	// Compute absolute camera position and target
@@ -609,20 +584,24 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 	if (m_arm_inertia)
 		addArmInertia(yaw);
 
-	if (m_wield_swap) {
-		m_wield_swap = false;
-		updateWieldedTool();
-	}
-
 	// The wielded item or the empty arm as Minecraft draws them in first person
 	// (ItemInHandRenderer, and the item models' firstperson_righthand display), in blocks of
 	// 75 units for a node mesh (30 units at Minecraft's scale 0.4) and 40 / 0.68 otherwise (an
-	// extruded image is 40 units at 0.68); the punch reload lowers the arm by up to 0.6 block,
-	// a map by 1.2
+	// extruded image is 40 units at 0.68). Its height goes down when it changes, 0.4 a tick, and it
+	// is swapped once below 0.1, then comes back up as the punch reloads; drawn between the last two
+	// ticks, lowered by up to 0.6 block, a map by 1.2
+	for (m_height_time += std::min(frametime, 1.0f); m_height_time >= 0.05f; m_height_time -= 0.05f) {
+		const f32 height_to = m_wield_changing ? 0.0f : std::pow(tool_reload_ratio, 3.0f);
+		m_height_before = m_height_tick;
+		m_height_tick += rangelim(height_to - m_height_tick, -0.4f, 0.4f);
+		if (m_wield_changing && m_height_tick < 0.1f) {
+			m_wield_changing = false;
+			updateWieldedTool();
+		}
+	}
+	m_wield_height = m_height_before + (m_height_tick - m_height_before) * m_height_time / 0.05f;
 	const bool node = m_wieldnode->isNodeMesh();
 	const f32 block = node ? 75.0f : 40.0f / 0.68f;
-	const f32 step = 8.0f * frametime;
-	m_wield_height += rangelim(std::pow(tool_reload_ratio, 3.0f) - m_wield_height, -step, step);
 	const f32 equip = 1.0f - m_wield_height, lower = 0.6f * equip;
 	const f32 p = m_digging_button != -1 ? m_digging_anim : 0.0f;
 	const f32 s = std::sin(std::sqrt(p) * M_PI), s2 = std::sin(std::sqrt(p) * 2 * M_PI);
@@ -656,14 +635,13 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 		else
 			m = m * translation(1.13f / 16, 3.2f / 16, 1.13f / 16) * rotation(0, -90, 0) * rotation(0, 0, 25);
 	}
-	m = flip_z(m);
-	v3f shift(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X, m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
-	shift.Y += std::abs(m_wield_change_timer)*320 - 40;
-	if (m_digging_button == -1) {
-		f32 bobfrac = my_modf(m_view_bobbing_anim);
-		shift.X -= std::sin(bobfrac*M_PI*2.0) * 3.0;
-		shift.Y += std::sin(my_modf(bobfrac*2.0)*M_PI) * 3.0;
-	}
+	// the hands bob with the view
+	m = flip_z(bob * m);
+	left = bob * left;
+	map = bob * map;
+	m_hand_bob = flip_z(bob);
+	m_hand_bob.setTranslation(m_hand_bob.getTranslation() * 40.0f / 0.68f);
+	const v3f shift(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X, m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
 	// an item is a pixel thick in Minecraft, a tenth of its size in the extruded mesh
 	m_wieldnode->setScale(v3f(1, 1, node || m_wieldnode->isArm() ? 1 : 0.625f));
 	m_wieldnode->setPosition(m.getTranslation() * block + shift);
@@ -677,7 +655,7 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 		updateMapImages(player);
 	}
 
-	if (m_wieldnode->isArm() && arm_skin(m_client) != m_arm_skin)
+	if (m_wieldnode->isArm() && !m_wield_changing && arm_skin(m_client) != m_arm_skin)
 		updateWieldedTool();
 	m_player_light_color = player->light_color;
 	m_wieldnode->setLightColorAndAnimation(m_player_light_color,
@@ -687,28 +665,6 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 
 	// Set render distance
 	updateViewingRange();
-
-	// If the player is walking, swimming, or climbing,
-	// view bobbing is enabled and free_move is off,
-	// start (or continue) the view bobbing animation.
-	const v3f &speed = player->getSpeed();
-	const bool movement_XZ = std::hypot(speed.X, speed.Z) > BS;
-	const bool movement_Y = std::abs(speed.Y) > BS;
-
-	const bool walking = movement_XZ && player->touching_ground;
-	const bool swimming = (movement_XZ || player->swimming_vertical) && player->in_liquid;
-	const bool climbing = movement_Y && player->is_climbing;
-	const bool flying = g_settings->getBool("free_move")
-		&& m_client->checkLocalPrivilege("fly");
-	if ((walking || swimming || climbing) && !flying) {
-		// Start animation
-		m_view_bobbing_state = 1;
-		m_view_bobbing_speed = MYMIN(speed.getLength(), 70);
-	} else if (m_view_bobbing_state == 1) {
-		// Stop animation
-		m_view_bobbing_state = 2;
-		m_view_bobbing_speed = 60;
-	}
 }
 
 void Camera::updateViewingRange()
@@ -748,15 +704,9 @@ void Camera::wield(const ItemStack &item, bool animate, bool arm)
 		m_wield_map_next = !arm &&
 				itemgroup_get(item.getDefinition(m_client->idef()).groups, "held_map") > 0;
 
-		if (!animate) {
+		m_wield_changing = animate;
+		if (!animate)
 			updateWieldedTool();
-			return;
-		}
-
-		if (m_wield_change_timer > 0)
-			m_wield_change_timer = -m_wield_change_timer;
-		else if (m_wield_change_timer == 0)
-			m_wield_change_timer = -0.001;
 	}
 }
 
@@ -1023,19 +973,18 @@ void Camera::updateOffhand(LocalPlayer *player, f32 frametime)
 	q.toEuler(rot);
 	rot *= core::RADTODEG;
 
-	// rises into view when it changes, and sways and bobs as the right hand, mirrored
+	// rises into view when it changes, sways as the right hand, mirrored, and bobs with the view
 	pos.Y -= (1.0f - easeCurve(m_offhand_equip)) * 40.0f;
 	pos.X -= m_wieldmesh_offset.X - WIELDMESH_OFFSET_X;
 	pos.Y += m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y;
-	if (m_digging_button == -1) {
-		f32 bobfrac = my_modf(m_view_bobbing_anim);
-		pos.X += std::sin(bobfrac * M_PI * 2.0) * 3.0;
-		pos.Y += std::sin(my_modf(bobfrac * 2.0) * M_PI) * 3.0;
-	}
 	// its poses were set under a fixed 72 degree FOV: as near as keeps it the same on screen
 	pos.Z *= std::tan(36.0f * core::DEGTORAD) / std::tan(wield_fov_y(m_aspect) / 2);
-	m_offhand_node->setPosition(pos);
-	m_offhand_node->setRotation(rot);
+	core::matrix4 pose;
+	pose.setRotationDegrees(rot);
+	pose.setTranslation(pos);
+	pose = m_hand_bob * pose;
+	m_offhand_node->setPosition(pose.getTranslation());
+	m_offhand_node->setRotation(pose.getRotationDegrees());
 	m_offhand_node->setLightColorAndAnimation(m_player_light_color, m_client->getAnimationTime());
 }
 

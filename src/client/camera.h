@@ -160,6 +160,9 @@ public:
 	// arm: the hand is empty, drawn as Minecraft's arm
 	void wield(const ItemStack &item, bool animate = true, bool arm = false);
 
+	// The wielded item was used up a little (a node placed): it drops and comes back up
+	void itemUsed() { m_height_tick = 0.0f; }
+
 	// Draw the wielded tool.
 	// This has to happen *after* the main scene is drawn.
 	// Warning: This clears the Z buffer.
@@ -266,14 +269,13 @@ private:
 	f32 m_fov_x = 1.0f;
 	f32 m_fov_y = 1.0f;
 
-	// View bobbing animation frame (0 <= m_view_bobbing_anim < 1)
-	f32 m_view_bobbing_anim = 0.0f;
-	// If 0, view bobbing is off (e.g. player is standing).
-	// If 1, view bobbing is on (player is walking).
-	// If 2, view bobbing is getting switched off.
-	s32 m_view_bobbing_state = 0;
-	// Speed of view bobbing animation
-	f32 m_view_bobbing_speed = 0.0f;
+	// Minecraft's walking bob: the distance walked and stepped (in blocks, times 0.6), where
+	// the player was, how strong the bob is (0 to 0.1) and what it does to the hands, in the
+	// wield scene
+	f32 m_walk_dist = 0.0f, m_step_dist = 0.0f;
+	std::optional<v3f> m_walk_pos;
+	f32 m_bob = 0.0f;
+	core::matrix4 m_hand_bob;
 
 	// Digging animation frame (0 <= m_digging_anim < 1)
 	f32 m_digging_anim = 0.0f;
@@ -283,16 +285,16 @@ private:
 	s32 m_digging_button = -1;
 	// The swing passed its half while still digging: it snaps back to start again
 	bool m_digging_snap = false;
-	// Height of the wielded item after a punch, 0 (lowered) to 1, as the punch reloads
+	// Height of the wielded item, 0 (lowered) to 1: down while it changes, then as the punch reloads;
+	// moved a tick at a time as Minecraft does, and drawn between the last two ticks
 	f32 m_wield_height = 1.0f;
+	f32 m_height_tick = 1.0f, m_height_before = 1.0f, m_height_time = 0.0f;
 
-	// Animation when changing wielded item
-	f32 m_wield_change_timer = 0.125f;
+	// The item to change to, swapped in once the hand is down
+	bool m_wield_changing = false;
 	ItemStack m_wield_item_next;
 	bool m_wield_arm_next = false;
 	bool m_wield_map = false, m_wield_map_next = false;
-	// the change animation reached its bottom: the mesh is swapped in the next update
-	bool m_wield_swap = false;
 	std::string m_arm_skin;
 
 	CameraMode m_camera_mode;

@@ -543,7 +543,8 @@ offhand_raised_position (Raised off-hand position) v3f (-22, -18, 50)
 offhand_raised_rotation (Raised off-hand rotation) v3f (0, 10, 0)
 
 #    Enable view bobbing and amount of view bobbing.
-#    For example: 0 for no view bobbing; 1.0 for normal; 2.0 for double.
+#    For example: 0 for no view bobbing; 1.0 for Minecraft's, of the view and the hands;
+#    2.0 for double.
 view_bobbing_amount (View bobbing factor) float 1.0 0.0 7.9
 
 [**Damage]

@@ -3098,6 +3098,10 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
 		bool placed = nodePlacement(def, selected_item, nodepos, neighborpos,
 			pointed, meta);
 
+		// as in Minecraft, the item drops and comes back up
+		if (placed)
+			camera->itemUsed();
+
 		if (placed && client->modsLoaded())
 			client->getScript()->on_placenode(pointed, def);
 	}
