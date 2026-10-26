@@ -486,6 +486,9 @@ void Hud::drawLuaElements(const v3s16 &camera_offset, bool only_unhidable)
 				[[fallthrough]];
 			}
 			case HUD_ELEM_IMAGE: {
+				// drawn on the map in the hands instead
+				if (e->name == "held_map" && client->getCamera()->handsShown())
+					continue;
 				video::ITexture *texture = tsrc->getTexture(e->text);
 				if (!texture)
 					continue;
