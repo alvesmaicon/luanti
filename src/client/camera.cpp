@@ -13,6 +13,9 @@
 #include "client/texturesource.h"
 #include "settings.h"
 #include "wieldmesh.h"
+#include "hud_element.h"
+#include "itemdef.h"
+#include "itemgroup.h"
 #include "noise.h"         // easeCurve
 #include "mtevent.h"
 #include "nodedef.h"
@@ -55,6 +58,13 @@ static core::matrix4 translation(f32 x, f32 y, f32 z)
 	return m;
 }
 
+static core::matrix4 scaling(f32 k)
+{
+	core::matrix4 m;
+	m.setScale(v3f(k));
+	return m;
+}
+
 // Minecraft is right-handed, looking down -z; Irrlicht left-handed, looking down +z
 static core::matrix4 flip_z(core::matrix4 m)
 {
@@ -63,6 +73,45 @@ static core::matrix4 flip_z(core::matrix4 m)
 		m[8 + i] = -m[8 + i];
 	}
 	return m;
+}
+
+// An arm of the player's model at its shoulder, turned out by 0.1 radian as Minecraft draws a hand
+static core::matrix4 arm_part(bool left)
+{
+	return translation((left ? 5 : -5) / 16.0f, 2 / 16.0f, 0) *
+			rotation(0, 0, (left ? -0.1f : 0.1f) * core::RADTODEG);
+}
+
+// Minecraft's empty right arm (renderPlayerArm): p is the swing's progress, equip how far it is lowered
+static core::matrix4 player_arm(f32 p, f32 equip)
+{
+	const f32 s = std::sin(std::sqrt(p) * M_PI), s2 = std::sin(std::sqrt(p) * 2 * M_PI);
+	return translation(-0.3f * s + 0.64f, 0.4f * s2 - 0.6f - 0.6f * equip, -0.4f * std::sin(p * M_PI) - 0.72f) *
+			rotation(0, 45 + 70 * s, 0) * rotation(0, 0, -20 * std::sin(p * p * M_PI)) *
+			translation(-1, 3.6f, 3.5f) * rotation(0, 0, 120) * rotation(200, 0, 0) *
+			rotation(0, -135, 0) * translation(5.6f, 0, 0) * arm_part(false);
+}
+
+// An arm reaching up to a map held in both hands (renderMapHand)
+static core::matrix4 map_hand(bool left)
+{
+	const f32 f = left ? -1 : 1;
+	return rotation(0, 92, 0) * rotation(45, 0, 0) * rotation(0, 0, -41 * f) *
+			translation(0.3f * f, -1.1f, 0.45f) * arm_part(left);
+}
+
+// A map in both hands lies flat looking ahead and faces the eyes from 49.5 degrees down
+static f32 map_tilt(f32 pitch)
+{
+	const f32 f = rangelim(1 - pitch / 45 + 0.1f, 0.0f, 1.0f);
+	return -std::cos(f * M_PI) * 0.5f + 0.5f;
+}
+
+// From a map's pixels (128 a side, y down) to the map in hand (renderMap)
+static core::matrix4 map_pixels()
+{
+	return rotation(0, 180, 0) * rotation(0, 0, 180) * scaling(0.38f) * translation(-0.5f, -0.5f, 0) *
+			scaling(1 / 128.0f);
 }
 
 // The skin of the local player's model, for the arm
@@ -105,6 +154,10 @@ Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *re
 	m_offhand_node->setItem(ItemStack(), m_client);
 	m_offhand_node->setVisible(false);
 	m_offhand_node->drop();
+	m_left_arm = new WieldMeshSceneNode(m_wieldmgr, -1);
+	m_left_arm->setItem(ItemStack(), m_client);
+	m_left_arm->setVisible(false);
+	m_left_arm->drop();
 
 	m_nametags.clear();
 
@@ -188,9 +241,9 @@ void Camera::step(f32 dtime)
 	bool was_under_zero = m_wield_change_timer < 0;
 	m_wield_change_timer = MYMIN(m_wield_change_timer + dtime, 0.125);
 
-	if (m_wield_change_timer >= 0 && was_under_zero) {
-		updateWieldedTool();
-	}
+	// swapped by the next update(), which poses it before it is drawn
+	if (m_wield_change_timer >= 0 && was_under_zero)
+		m_wield_swap = true;
 
 	if (m_view_bobbing_state != 0)
 	{
@@ -556,24 +609,43 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 	if (m_arm_inertia)
 		addArmInertia(yaw);
 
+	if (m_wield_swap) {
+		m_wield_swap = false;
+		updateWieldedTool();
+	}
+
 	// The wielded item or the empty arm as Minecraft draws them in first person
 	// (ItemInHandRenderer, and the item models' firstperson_righthand display), in blocks of
 	// 75 units for a node mesh (30 units at Minecraft's scale 0.4) and 40 / 0.68 otherwise (an
-	// extruded image is 40 units at 0.68); the punch reload lowers the arm by up to 0.6 block
+	// extruded image is 40 units at 0.68); the punch reload lowers the arm by up to 0.6 block,
+	// a map by 1.2
 	const bool node = m_wieldnode->isNodeMesh();
 	const f32 block = node ? 75.0f : 40.0f / 0.68f;
 	const f32 step = 8.0f * frametime;
 	m_wield_height += rangelim(std::pow(tool_reload_ratio, 3.0f) - m_wield_height, -step, step);
-	const f32 lower = 0.6f * (1.0f - m_wield_height);
+	const f32 equip = 1.0f - m_wield_height, lower = 0.6f * equip;
 	const f32 p = m_digging_button != -1 ? m_digging_anim : 0.0f;
 	const f32 s = std::sin(std::sqrt(p) * M_PI), s2 = std::sin(std::sqrt(p) * 2 * M_PI);
 	const f32 sp = std::sin(p * M_PI), spp = std::sin(p * p * M_PI);
-	core::matrix4 m;
-	if (m_wieldnode->isArm()) {
-		m = translation(-0.3f * s + 0.64f, 0.4f * s2 - 0.6f - lower, -0.4f * sp - 0.72f) *
-				rotation(0, 45 + 70 * s, 0) * rotation(0, 0, -20 * spp) *
-				translation(-1, 3.6f, 3.5f) * rotation(0, 0, 120) * rotation(200, 0, 0) *
-				rotation(0, -135, 0) * translation(5.6f, 0, 0) * translation(-5 / 16.0f, 2 / 16.0f, 0);
+	const bool two_hands = m_offhand_name.empty();
+	core::matrix4 m, left, map;
+	if (m_wield_map && two_hands) {
+		// both arms hold it up, lower and flatter the higher the player looks (renderTwoHandedMap)
+		const f32 tilt = map_tilt(pitch);
+		const core::matrix4 hold = translation(0, 0.1f * sp, -0.4f * s) *
+				translation(0, 0.04f - 1.2f * equip - 0.5f * tilt, -0.72f) * rotation(-85 * tilt, 0, 0);
+		m = hold * rotation(0, 90, 0) * map_hand(false);
+		left = hold * rotation(0, 90, 0) * map_hand(true);
+		map = hold * rotation(20 * s, 0, 0) * scaling(2) * map_pixels();
+	} else if (m_wield_map) {
+		// small at the right, the left hand holding something else (renderOneHandedMap)
+		const core::matrix4 side = translation(0.125f, -0.125f, 0);
+		m = side * rotation(0, 0, 10) * player_arm(p, equip);
+		map = side * translation(0.51f, -0.08f - 1.2f * equip, -0.75f) *
+				translation(-0.5f * s, 0.4f * s2 - 0.3f * s, -0.3f * sp) *
+				rotation(-45 * s, 0, 0) * rotation(0, -30 * s, 0) * map_pixels();
+	} else if (m_wieldnode->isArm()) {
+		m = player_arm(p, equip);
 	} else {
 		m = translation(-0.4f * s, 0.2f * s2, -0.2f * sp) *
 				translation(0.56f, -0.52f - lower, -0.72f) *
@@ -585,25 +657,32 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
 			m = m * translation(1.13f / 16, 3.2f / 16, 1.13f / 16) * rotation(0, -90, 0) * rotation(0, 0, 25);
 	}
 	m = flip_z(m);
-	v3f wield_position = m.getTranslation() * block +
-			v3f(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X, m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
-	const v3f wield_rotation = m.getRotationDegrees();
-	wield_position.Y += std::abs(m_wield_change_timer)*320 - 40;
+	v3f shift(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X, m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
+	shift.Y += std::abs(m_wield_change_timer)*320 - 40;
 	if (m_digging_button == -1) {
 		f32 bobfrac = my_modf(m_view_bobbing_anim);
-		wield_position.X -= std::sin(bobfrac*M_PI*2.0) * 3.0;
-		wield_position.Y += std::sin(my_modf(bobfrac*2.0)*M_PI) * 3.0;
+		shift.X -= std::sin(bobfrac*M_PI*2.0) * 3.0;
+		shift.Y += std::sin(my_modf(bobfrac*2.0)*M_PI) * 3.0;
 	}
 	// an item is a pixel thick in Minecraft, a tenth of its size in the extruded mesh
 	m_wieldnode->setScale(v3f(1, 1, node || m_wieldnode->isArm() ? 1 : 0.625f));
-	m_wieldnode->setPosition(wield_position);
-	m_wieldnode->setRotation(wield_rotation);
+	m_wieldnode->setPosition(m.getTranslation() * block + shift);
+	m_wieldnode->setRotation(m.getRotationDegrees());
+	m_left_arm->setVisible(m_wield_map && two_hands);
+	if (m_wield_map) {
+		left = flip_z(left);
+		m_left_arm->setPosition(left.getTranslation() * block + shift);
+		m_left_arm->setRotation(left.getRotationDegrees());
+		m_map_matrix = translation(shift.X, shift.Y, shift.Z) * scaling(block) * flip_z(map);
+		updateMapImages(player);
+	}
 
 	if (m_wieldnode->isArm() && arm_skin(m_client) != m_arm_skin)
 		updateWieldedTool();
 	m_player_light_color = player->light_color;
 	m_wieldnode->setLightColorAndAnimation(m_player_light_color,
 			m_client->getAnimationTime());
+	m_left_arm->setLightColorAndAnimation(m_player_light_color, m_client->getAnimationTime());
 	updateOffhand(player, frametime);
 
 	// Set render distance
@@ -666,6 +745,8 @@ void Camera::wield(const ItemStack &item, bool animate, bool arm)
 			item.metadata != m_wield_item_next.metadata || arm != m_wield_arm_next) {
 		m_wield_item_next = item;
 		m_wield_arm_next = arm;
+		m_wield_map_next = !arm &&
+				itemgroup_get(item.getDefinition(m_client->idef()).groups, "held_map") > 0;
 
 		if (!animate) {
 			updateWieldedTool();
@@ -688,7 +769,8 @@ void Camera::drawWieldedTool(core::matrix4* translation)
 	scene::ICameraSceneNode* cam = m_wieldmgr->getActiveCamera();
 	cam->setAspectRatio(m_cameranode->getAspectRatio());
 	cam->setFOV(wield_fov_y(m_cameranode->getAspectRatio()));
-	cam->setNearValue(10);
+	// the arms holding a map come as near as Minecraft's 0.05 block
+	cam->setNearValue(m_wield_map ? 3 : 10);
 	cam->setFarValue(1000);
 	if (translation != NULL)
 	{
@@ -704,6 +786,93 @@ void Camera::drawWieldedTool(core::matrix4* translation)
 		cam->setTarget(focusPoint);
 	}
 	m_wieldmgr->drawAll();
+	if (m_wield_map)
+		drawHeldMap();
+}
+
+bool Camera::handsShown() const
+{
+	const LocalPlayer *player = m_client->getEnv().getLocalPlayer();
+	return m_camera_mode == CAMERA_MODE_FIRST && (player->hud_flags & HUD_FLAG_WIELDITEM_VISIBLE);
+}
+
+// The HUD images named "held_map" laid out as the HUD would draw them, together as big as
+// Minecraft's map with its border (142 of its 128 pixels); none keeps the last ones
+void Camera::updateMapImages(LocalPlayer *player)
+{
+	std::vector<const HudElement *> elems;
+	for (auto const &e : player->hud.getElements()) {
+		if (e && e->type == HUD_ELEM_IMAGE && e->name == "held_map")
+			elems.push_back(e.get());
+	}
+	if (elems.empty())
+		return;
+	std::stable_sort(elems.begin(), elems.end(), [] (const HudElement *l, const HudElement *r) {
+		return l->z_index < r->z_index;
+	});
+	ITextureSource *tsrc = m_client->getTextureSource();
+	const v2u32 screen = m_wieldmgr->getVideoDriver()->getScreenSize();
+	m_map_images.clear();
+	core::rectf box;
+	for (const HudElement *e : elems) {
+		video::ITexture *texture = tsrc->getTexture(e->text);
+		if (!texture)
+			continue;
+		const core::dimension2du img = texture->getOriginalSize();
+		v2f size(img.Width * e->scale.X, img.Height * e->scale.Y);
+		if (e->scale.X < 0)
+			size.X = screen.X * e->scale.X * -0.01f;
+		if (e->scale.Y < 0)
+			size.Y = screen.Y * e->scale.Y * -0.01f;
+		const v2f at = v2f(e->pos.X * screen.X, e->pos.Y * screen.Y) + e->offset +
+				v2f((e->align.X - 1) * size.X / 2, (e->align.Y - 1) * size.Y / 2);
+		const core::rectf rect(at.X, at.Y, at.X + size.X, at.Y + size.Y);
+		if (m_map_images.empty())
+			box = rect;
+		box.addInternalPoint(rect.UpperLeftCorner);
+		box.addInternalPoint(rect.LowerRightCorner);
+		m_map_images.push_back({texture, rect});
+	}
+	const f32 side = std::max(box.getWidth(), box.getHeight());
+	if (side <= 0) {
+		m_map_images.clear();
+		return;
+	}
+	const v2f centre = box.getCenter(), middle(64, 64);
+	for (MapImage &i : m_map_images) {
+		i.rect = core::rectf(middle + (i.rect.UpperLeftCorner - centre) * 142 / side,
+				middle + (i.rect.LowerRightCorner - centre) * 142 / side);
+	}
+}
+
+void Camera::drawHeldMap()
+{
+	video::IVideoDriver *driver = m_wieldmgr->getVideoDriver();
+	video::SMaterial material;
+	material.MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
+	material.ZWriteEnable = video::EZW_OFF;
+	material.BackfaceCulling = false;
+	material.forEachTexture([] (auto &tex) {
+		tex.MinFilter = video::ETMINF_NEAREST_MIPMAP_NEAREST;
+		tex.MagFilter = video::ETMAGF_NEAREST;
+	});
+	// lit as the arms; drawn in order without writing depth, each over the last
+	const video::SColor c(255, m_player_light_color.getRed(), m_player_light_color.getGreen(),
+			m_player_light_color.getBlue());
+	const u16 indices[] = {0, 1, 2, 2, 3, 0};
+	driver->setTransform(video::ETS_WORLD, m_map_matrix);
+	for (const MapImage &i : m_map_images) {
+		const v2f a = i.rect.UpperLeftCorner, b = i.rect.LowerRightCorner;
+		video::S3DVertex vertices[] = {
+			video::S3DVertex(a.X, a.Y, 0, 0, 0, 1, c, 0, 0),
+			video::S3DVertex(b.X, a.Y, 0, 0, 0, 1, c, 1, 0),
+			video::S3DVertex(b.X, b.Y, 0, 0, 0, 1, c, 1, 1),
+			video::S3DVertex(a.X, b.Y, 0, 0, 0, 1, c, 0, 1),
+		};
+		material.setTexture(0, i.texture);
+		driver->setMaterial(material);
+		driver->drawIndexedTriangleList(vertices, 4, indices, 2);
+	}
 }
 
 void Camera::toggleCameraMode()
@@ -872,11 +1041,20 @@ void Camera::updateOffhand(LocalPlayer *player, f32 frametime)
 
 void Camera::updateWieldedTool()
 {
-	// An empty hand is Minecraft's arm with the player's skin
-	if (m_wield_arm_next) {
+	// An empty hand is Minecraft's arm with the player's skin, and a map is held by the arms
+	m_wield_map = m_wield_map_next;
+	// the same map again shows what it showed until the server's images come
+	if (m_wield_map && (m_wield_item_next.name != m_map_item.name ||
+			m_wield_item_next.metadata != m_map_item.metadata)) {
+		m_map_images.clear();
+		m_map_item = m_wield_item_next;
+	}
+	if (m_wield_arm_next || m_wield_map) {
 		m_arm_skin = arm_skin(m_client);
-		m_wieldnode->setArm(m_client->getTextureSource()->getTexture(m_arm_skin),
-				m_client->getShaderSource());
+		video::ITexture *skin = m_client->getTextureSource()->getTexture(m_arm_skin);
+		m_wieldnode->setArm(skin, m_client->getShaderSource());
+		if (m_wield_map)
+			m_left_arm->setArm(skin, m_client->getShaderSource(), true);
 	} else {
 		m_wieldnode->setItem(m_wield_item_next, m_client);
 	}

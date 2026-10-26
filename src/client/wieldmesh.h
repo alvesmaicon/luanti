@@ -136,9 +136,9 @@ public:
 	// Drawn as the node itself (a cube...), not as an extruded image
 	bool isNodeMesh() const { return m_node_mesh; }
 
-	// Minecraft's first person arm: the right arm of a skin (64x32 or 64x64) on a box of
-	// 4x12x4 pixels, in blocks of WIELD_SCALE_FACTOR_EXTRUDED / 0.68 units, z flipped
-	void setArm(video::ITexture *skin, IShaderSource *shdsrc);
+	// Minecraft's first person arm: the right (or left) arm of a skin (64x32 or 64x64) on a box
+	// of 4x12x4 pixels, in blocks of WIELD_SCALE_FACTOR_EXTRUDED / 0.68 units, z flipped
+	void setArm(video::ITexture *skin, IShaderSource *shdsrc, bool left = false);
 	bool isArm() const { return m_arm; }
 
 	virtual void render();

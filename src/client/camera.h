@@ -9,6 +9,8 @@
 #include "util/basic_macros.h"
 #include "util/numeric.h"
 #include <plane3d.h>
+#include <matrix4.h>
+#include <rect.h>
 #include <array>
 #include <vector>
 #include <optional>
@@ -25,6 +27,10 @@ namespace scene {
 	class ICameraSceneNode;
 	class ISceneManager;
 	class ISceneNode;
+};
+
+namespace video {
+	class ITexture;
 };
 
 struct Nametag
@@ -159,6 +165,10 @@ public:
 	// Warning: This clears the Z buffer.
 	void drawWieldedTool(core::matrix4* translation=NULL);
 
+	// The hands are drawn: a wielded map (item group "held_map") is in them, the HUD images
+	// named "held_map" drawn on it, so the HUD leaves those out
+	bool handsShown() const;
+
 	// Toggle the current camera mode
 	void toggleCameraMode();
 
@@ -192,6 +202,9 @@ private:
 	// The first item of the player's "offhand" list, held in the left hand
 	void updateOffhand(LocalPlayer *player, f32 frametime);
 
+	void updateMapImages(LocalPlayer *player);
+	void drawHeldMap();
+
 	// Nodes
 	scene::ISceneNode *m_playernode = nullptr;
 	scene::ISceneNode *m_headnode = nullptr;
@@ -200,6 +213,15 @@ private:
 	scene::ISceneManager *m_wieldmgr = nullptr;
 	WieldMeshSceneNode *m_wieldnode = nullptr;
 	WieldMeshSceneNode *m_offhand_node = nullptr;
+	// The left arm, when both hands hold a map
+	WieldMeshSceneNode *m_left_arm = nullptr;
+	// What the map in hand shows, in its pixels (128 a side, y down), kept while it goes away,
+	// and which map it is
+	struct MapImage { video::ITexture *texture; core::rectf rect; };
+	std::vector<MapImage> m_map_images;
+	ItemStack m_map_item;
+	// From the map's pixels to the wield scene
+	core::matrix4 m_map_matrix;
 	std::string m_offhand_name;
 	// 0 lowered .. 1 raised, and 0 .. 1 while it comes up into view
 	f32 m_offhand_raise = 0.0f;
@@ -268,6 +290,9 @@ private:
 	f32 m_wield_change_timer = 0.125f;
 	ItemStack m_wield_item_next;
 	bool m_wield_arm_next = false;
+	bool m_wield_map = false, m_wield_map_next = false;
+	// the change animation reached its bottom: the mesh is swapped in the next update
+	bool m_wield_swap = false;
 	std::string m_arm_skin;
 
 	CameraMode m_camera_mode;

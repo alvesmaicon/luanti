@@ -608,7 +608,7 @@ void WieldMeshSceneNode::setColor(video::SColor c)
 	}
 }
 
-void WieldMeshSceneNode::setArm(video::ITexture *skin, IShaderSource *shdsrc)
+void WieldMeshSceneNode::setArm(video::ITexture *skin, IShaderSource *shdsrc, bool left)
 {
 	m_node_mesh = false;
 	m_arm = true;
@@ -622,19 +622,25 @@ void WieldMeshSceneNode::setArm(video::ITexture *skin, IShaderSource *shdsrc)
 		return;
 	}
 
-	// The box from (-3, -2, -2) to (1, 10, 2) pixels, the shoulder at y -2; each face as a corner,
-	// its edges along the skin's u and v, and where it starts in the skin
-	struct Face { v3f corner, u, v; f32 tu, tv; };
-	const Face faces[] = {
-		{{-3, -2, 2}, {0, 0, -4}, {0, 12, 0}, 40, 20}, // outside
-		{{-3, -2, -2}, {4, 0, 0}, {0, 12, 0}, 44, 20}, // front
-		{{1, -2, -2}, {0, 0, 4}, {0, 12, 0}, 48, 20}, // inside
-		{{1, -2, 2}, {-4, 0, 0}, {0, 12, 0}, 52, 20}, // back
-		{{-3, -2, -2}, {4, 0, 0}, {0, 0, 4}, 44, 16}, // shoulder
-		{{-3, 10, -2}, {4, 0, 0}, {0, 0, 4}, 48, 16}, // hand
-	};
+	// The right arm's box from (-3, -2, -2) to (1, 10, 2) pixels, the shoulder at y -2, its skin
+	// at (40, 16); the left arm's from (-1, -2, -2) to (3, 10, 2), at (32, 48) on a 64x64 skin. An
+	// old 64x32 skin has one arm, which Minecraft mirrors for the left. Each face as a corner, its
+	// edges along the skin's u and v, and where it starts in the skin
 	const core::dimension2d<u32> size = skin->getOriginalSize();
 	const f32 tw = 64, th = 64.0f * size.Height / size.Width;
+	const bool own = left && th >= 64, mirror = left && !own;
+	const f32 x0 = own ? -1 : -3, u0 = own ? 32 : 40, v0 = own ? 48 : 16;
+	struct Face { v3f corner, u, v; f32 tu, tv; };
+	const Face faces[] = {
+		{{x0, -2, 2}, {0, 0, -4}, {0, 12, 0}, u0, v0 + 4}, // -x
+		{{x0, -2, -2}, {4, 0, 0}, {0, 12, 0}, u0 + 4, v0 + 4}, // front
+		{{x0 + 4, -2, -2}, {0, 0, 4}, {0, 12, 0}, u0 + 8, v0 + 4}, // +x
+		{{x0 + 4, -2, 2}, {-4, 0, 0}, {0, 12, 0}, u0 + 12, v0 + 4}, // back
+		{{x0, -2, -2}, {4, 0, 0}, {0, 0, 4}, u0 + 4, v0}, // shoulder
+		{{x0, 10, -2}, {4, 0, 0}, {0, 0, 4}, u0 + 8, v0}, // hand
+	};
+	const v3f centre(x0 + 2, 4, 0);
+	const f32 mx = mirror ? -1 : 1;
 	scene::SMeshBuffer *buf = new scene::SMeshBuffer();
 	video::SColor c(0xFFFFFFFF);
 	for (const Face &f : faces) {
@@ -644,12 +650,11 @@ void WieldMeshSceneNode::setArm(video::ITexture *skin, IShaderSource *shdsrc)
 		video::S3DVertex vertices[4];
 		// in blocks with z flipped; front faces wind as Irrlicht wants them seen from outside
 		v3f normal = f.u.crossProduct(f.v).normalize();
-		const v3f centre(-1, 4, 0);
 		if (normal.dotProduct(f.corner - centre) < 0)
 			normal = -normal;
 		for (int i = 0; i < 4; i++) {
 			const v3f q = p[i] / 16.0f;
-			vertices[i] = video::S3DVertex(q.X, q.Y, -q.Z, normal.X, normal.Y, -normal.Z, c,
+			vertices[i] = video::S3DVertex(mx * q.X, q.Y, -q.Z, mx * normal.X, normal.Y, -normal.Z, c,
 					t[i].X / tw, t[i].Y / th);
 		}
 		const v3f a = vertices[1].Pos - vertices[0].Pos, b = vertices[2].Pos - vertices[0].Pos;
