@@ -65,6 +65,7 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 | Jumps and falls as in Minecraft: the jump 1.25 nodes high (it was 1.08), the next one half a second on while jump is held, falls as fast and a point of damage for each node beyond 3 (it was the speed over 14 m/s, nothing up to 5 nodes) | |
 | A wielded item in the group `held_map` is held as Minecraft holds a map: in both hands, almost flat while the player looks ahead and facing the eyes as they look down, or small at the side with something in the other hand. The HUD images named `held_map` are drawn on it, and flat only when the hands aren't drawn | |
 | The item in hand changes as in Minecraft, down and back up in 0.3 s, and a node placed makes it drop and come back; walking bobs the view and the hands as Minecraft does, footsteps at its pace (`view_bobbing_amount` 1.0 is Minecraft's) | |
+| Music as Minecraft plays it, from the user's own files: the tracks of `<user path>/music/<set>/*.ogg` (menu, game, creative, water), streamed from the file, one at a time, 10 to 20 minutes apart in a game and 1 to 30 s on the menu, at `music_volume` | |
 
 Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
 
