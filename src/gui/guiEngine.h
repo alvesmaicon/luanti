@@ -112,6 +112,8 @@ protected:
 };
 
 /** implementation of main menu based upon formspecs */
+class MusicPlayer;
+
 class GUIEngine {
 	/** grant ModApiMainMenu access to private members */
 	friend class ModApiMainMenu;
@@ -199,6 +201,8 @@ private:
 	std::unique_ptr<ISimpleTextureSource> m_texture_source;
 	/** sound manager */
 	std::unique_ptr<ISoundManager>        m_sound_manager;
+	/** Minecraft's menu music, from the user's music folder */
+	std::unique_ptr<MusicPlayer>          m_music;
 
 	/** representation of form source to be used in mainmenu formspec */
 	FormspecFormSource                   *m_formspecgui = nullptr;

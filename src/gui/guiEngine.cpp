@@ -35,6 +35,7 @@
 #endif
 
 #include <algorithm>
+#include "client/music.h"
 #include <csignal>
 
 
@@ -147,6 +148,7 @@ GUIEngine::GUIEngine(gui::IGUIElement *parent,
 #endif
 	if (!m_sound_manager)
 		m_sound_manager = std::make_unique<DummySoundManager>();
+	m_music = std::make_unique<MusicPlayer>(m_sound_manager.get());
 
 	// create topleft header
 	m_toplefttext = L"";
@@ -401,6 +403,7 @@ void GUIEngine::run()
 
 		sound_volume_control(m_sound_manager.get(), device->isWindowActive());
 		m_sound_manager->step(dtime);
+		m_music->step(dtime, "menu");
 
 #ifdef __ANDROID__
 		m_menu->getAndroidUIInput();
@@ -427,6 +430,7 @@ GUIEngine::~GUIEngine()
 		m_menu.reset();
 	}
 
+	m_music.reset();
 	m_sound_manager.reset();
 
 	m_irr_toplefttext->remove();

@@ -28,6 +28,7 @@
 class Game;
 class GameUI;
 class SoundMaker;
+class MusicPlayer;
 class Server;
 class NodeMetadata;
 class ProfilerGraph;
@@ -319,6 +320,7 @@ private:
 
 	std::unique_ptr<ISoundManager> sound_manager;
 	std::unique_ptr<SoundMaker> soundmaker;
+	std::unique_ptr<MusicPlayer> music;
 
 	ChatBackend *chat_backend = nullptr;
 	CaptureLogOutput m_chat_log_buf;

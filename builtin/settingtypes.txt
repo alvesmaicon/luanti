@@ -887,6 +887,10 @@ sound_volume_unfocused (Volume when unfocused) float 0.3 0.0 1.0
 #    pause menu.
 mute_sound (Mute sound) bool false
 
+#    Volume of the music in <user path>/music (menu, game, creative and water), on top of the volume of all sounds.
+#    0 plays none.
+music_volume (Music volume) float 1.0 0.0 1.0
+
 [*User Interfaces]
 
 #    Set the language. By default, the system language is used.

@@ -13,6 +13,7 @@
 #include "client/keys.h"
 #include "client/mapblock_mesh.h"
 #include "client/sound.h"
+#include "client/music.h"
 #include "clientmap.h"
 #include "clientmedia.h" // For clientMediaUpdateCacheCopy
 #include "config.h"
@@ -396,6 +397,7 @@ Game::Game() :
 Game::~Game()
 {
 	delete client;
+	music.reset();
 	soundmaker.reset();
 	sound_manager.reset();
 
@@ -658,6 +660,7 @@ void Game::shutdown()
 
 	delete client;
 	client = nullptr;
+	music.reset();
 	soundmaker.reset();
 	sound_manager.reset();
 
@@ -741,6 +744,7 @@ bool Game::initSound()
 
 	soundmaker = std::make_unique<SoundMaker>(sound_manager.get(), nodedef_manager);
 	soundmaker->registerReceiver(eventmgr);
+	music = std::make_unique<MusicPlayer>(sound_manager.get());
 
 	return true;
 }
@@ -2774,6 +2778,11 @@ void Game::updateSound(f32 dtime)
 	MapNode n = map.getNode(player->getFootstepNodePos());
 	soundmaker->update(dtime, player->makes_footstep_sound,
 			nodedef_manager->get(n).sound_footstep);
+
+	// Minecraft's music: its creative set with the creative privilege, its underwater set with the head in a liquid
+	MapNode cam_node = map.getNode(floatToInt(camera->getPosition(), BS));
+	music->step(dtime, nodedef_manager->get(cam_node).isLiquid() ? "water" :
+			client->checkPrivilege("creative") ? "creative" : "game");
 }
 
 
