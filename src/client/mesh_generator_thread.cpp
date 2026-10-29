@@ -6,6 +6,8 @@
 #include "settings.h"
 #include "profiler.h"
 #include "client.h"
+#include "clientenvironment.h"
+#include "localplayer.h"
 #include "clientmap.h"
 #include "mapblock.h"
 #include "mapblock_mesh.h"
@@ -117,8 +119,11 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool urgent, bool from_neighbo
 	const v3s16 mesh_position = mesh_grid.getMeshPos(p);
 
 	// Far away blocks are drawn from the simplified mesh of their region
-	if (!m_lod && m_client->getEnv().getClientMap().skipDetailMesh(mesh_position))
-		return true;
+	if (!m_lod && m_client->playerPosReceived()) {
+		const v3f from = m_client->getEnv().getLocalPlayer()->getPosition();
+		if (m_client->getEnv().getClientMap().skipDetailMesh(mesh_position, &from))
+			return true;
+	}
 
 	MutexAutoLock lock(m_mutex);
 

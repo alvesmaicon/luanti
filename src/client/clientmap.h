@@ -129,7 +129,7 @@ public:
 	// The block's data changed: regions that use it need a new simplified mesh
 	void markLodDirty(v3s16 blockpos);
 	// Whether the mesh at mesh_pos is far enough to be drawn simplified only
-	bool skipDetailMesh(v3s16 mesh_pos);
+	bool skipDetailMesh(v3s16 mesh_pos, const v3f *from = nullptr);
 
 	// For debug printing
 	void PrintInfo(std::ostream &out) override;
@@ -168,7 +168,8 @@ private:
 	};
 
 	// Distance from the camera to a region's center, in BS
-	f32 lodDistance(v3s16 region_pos) const;
+	f32 lodDistance(v3s16 region_pos) const { return lodDistanceFrom(region_pos, m_camera_position); }
+	f32 lodDistanceFrom(v3s16 region_pos, const v3f &from) const;
 	// Whether a region at distance d is drawn from its simplified mesh
 	bool useLod(v3s16 region_pos, f32 d, u64 now_ms);
 	bool detailMeshesMade(v3s16 region_pos);

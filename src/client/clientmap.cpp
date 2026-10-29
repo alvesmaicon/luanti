@@ -419,12 +419,12 @@ static const v3s16 lod_face_dirs[6] = {
 	v3s16(-1, 0, 0), v3s16(0, 0, 1), v3s16(0, 0, -1),
 };
 
-f32 ClientMap::lodDistance(v3s16 region_pos) const
+f32 ClientMap::lodDistanceFrom(v3s16 region_pos, const v3f &from) const
 {
 	constexpr s16 R = LodMeshGenerator::REGION;
 	const v3f center = intToFloat(region_pos * MAP_BLOCKSIZE, BS) +
 			v3f((R * MAP_BLOCKSIZE * 0.5f - 0.5f) * BS);
-	return center.getDistanceFrom(m_camera_position);
+	return center.getDistanceFrom(from);
 }
 
 bool ClientMap::detailMeshesMade(v3s16 region_pos)
@@ -509,14 +509,14 @@ void ClientMap::dropDetailMesh(MapBlock *block)
 	block->detail_mesh = MapBlock::DetailMesh::LeftOut;
 }
 
-bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
+bool ClientMap::skipDetailMesh(v3s16 mesh_pos, const v3f *from)
 {
 	constexpr s16 R = LodMeshGenerator::REGION;
 	// Only the BFS culler draws simplified meshes
 	if (m_cache_lod_distance <= 0 || useLoopsCuller() ||
 			R % m_client->getMeshGrid().cell_size != 0)
 		return false;
-	if (lodDistance(getContainerPos(mesh_pos, R) * R) <=
+	if (lodDistanceFrom(getContainerPos(mesh_pos, R) * R, from ? *from : m_camera_position) <=
 			(m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS)
 		return false;
 	MapBlock *block = getBlockNoCreateNoEx(mesh_pos);
