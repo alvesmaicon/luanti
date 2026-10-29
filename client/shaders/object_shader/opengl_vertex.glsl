@@ -2,6 +2,7 @@ uniform mat4 mWorld;
 uniform vec3 dayLight;
 uniform float animationTimer;
 uniform lowp vec4 materialColor;
+uniform float nightVision;
 
 VARYING_ vec3 vNormal;
 VARYING_ vec3 worldPosition;
@@ -147,6 +148,11 @@ void main(void)
 	color.rgb = color.rgb * (color.a * dayLight.rgb +
 		nightRatio * artificialLight.rgb) * 2.0;
 	color.a = 1.0;
+	// Night Vision as Minecraft's: the light scaled up to its brightest channel (the shade is vIDiff's)
+	if (nightVision > 0.0) {
+		float top = max(color.r, max(color.g, color.b));
+		color.rgb = mix(color.rgb, top > 0.004 ? color.rgb / top : vec3(1.0), nightVision);
+	}
 
 	// Emphase blue a bit in darker places
 	// See C++ implementation in mapblock_mesh.cpp final_color_blend()

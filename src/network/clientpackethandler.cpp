@@ -1939,5 +1939,10 @@ void Client::handleCommand_SetLighting(NetworkPacket *pkt)
 		if (s.light_curve_set)
 			pkt->readRawString(reinterpret_cast<char*>(s.light_curve), sizeof(s.light_curve));
 		*pkt >> s.ao_gamma;
+
+		if (!pkt->hasRemainingBytes())
+			break;
+		// handheld
+		*pkt >> lighting.night_vision;
 	} while (0);
 }

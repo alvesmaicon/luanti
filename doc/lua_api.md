@@ -9804,6 +9804,9 @@ You **must not** mix names and track numbers to refer to the same animation.
         * `ao_gamma`: Strength of node ambient-occlusion shading. Lower is darker, Higher is lighter.
           * Recommended range: from 0.25 to 3.0, default: 1.8
           * A value of 0.0 will disable this shading entirely.
+      * `night_vision`: from 0 (off, default) to 1, everything the player sees
+        as lit as its brightest light, faces still shaded (Minecraft's Night
+        Vision; handheld fork)
 
 * `get_lighting()`: returns the current state of lighting for the player.
     * Result is a table with the same fields as `light_definition` in `set_lighting`.

@@ -80,4 +80,6 @@ struct Lighting
 	v3f shadow_direction;
 
 	StaticLighting static_;
+	/// @brief Night Vision: 0 none, 1 everything as lit as the brightest light
+	float night_vision {0.0f};
 };

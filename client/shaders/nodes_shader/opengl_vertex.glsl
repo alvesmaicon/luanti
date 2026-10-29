@@ -7,6 +7,7 @@ uniform highp vec3 cameraOffset;
 uniform float animationTimer;
 uniform float fogDistance;
 uniform float fogShadingParameter;
+uniform float nightVision;
 
 VARYING_ vec3 vNormal;
 // World position in the visible world (i.e. relative to the cameraOffset.)
@@ -216,6 +217,16 @@ void main(void)
 	nightRatio = 1.0 - color.a;
 	color.rgb = color.rgb * (color.a * dayLight.rgb +
 		nightRatio * artificialLight.rgb) * 2.0;
+	// Night Vision as Minecraft's: the light scaled up to its brightest channel. The face's shade, baked in with the
+	// light, comes back from its normal (applyFacesShading's factors)
+	if (nightVision > 0.0) {
+		vec3 n2 = inVertexNormal * inVertexNormal;
+		float shade = n2.x + n2.y + n2.z < 0.001 ? 1.0 :
+			dot(n2, vec3(0.670820, inVertexNormal.y < 0.0 ? 0.447213 : 1.0, 0.836660));
+		float top = max(color.r, max(color.g, color.b));
+		vec3 lit = top > 0.004 ? color.rgb * (shade / top) : vec3(shade);
+		color.rgb = mix(color.rgb, lit, nightVision);
+	}
 	// fog clarity rides in the alpha: fp32 here, the fragment stage may be fp16
 	color.a = fogShadingParameter - fogShadingParameter * length(eyeVec) / fogDistance;
 

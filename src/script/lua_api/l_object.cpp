@@ -2905,6 +2905,9 @@ int ObjectRef::l_set_lighting(lua_State *L)
 	}
 	lua_pop(L, 1); // static
 
+	lighting.night_vision = rangelim(getfloatfield_default(L, 2, "night_vision", lighting.night_vision),
+			0.0f, 1.0f);
+
 	getServer(L)->setLighting(player, lighting);
 	return 0;
 }
@@ -2976,6 +2979,8 @@ int ObjectRef::l_get_lighting(lua_State *L)
 	lua_setfield(L, -2, "ao_gamma");
 	lua_setfield(L, -2, "static");
 
+	lua_pushnumber(L, lighting.night_vision);
+	lua_setfield(L, -2, "night_vision");
 	return 1;
 }
 
