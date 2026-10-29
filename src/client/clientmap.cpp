@@ -1031,6 +1031,14 @@ void ClientMap::touchMapBlocks()
 
 			blocks_in_range++;
 
+			// Left without its detail mesh while it counted as far: asked again once it is near
+			if (block->detail_mesh == MapBlock::DetailMesh::LeftOut && m_cache_lod_distance > 0 &&
+					lodDistance(getContainerPos(block->getPos(), LodMeshGenerator::REGION) * LodMeshGenerator::REGION) <=
+					(m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS) {
+				block->detail_mesh = MapBlock::DetailMesh::Asked;
+				m_client->addUpdateMeshTask(block->getPos());
+			}
+
 			if (m_cache_unload_out_of_view) {
 				// Out of view: let it expire like a block out of range
 				v3f to_block = mesh_sphere_center - m_camera_position;
