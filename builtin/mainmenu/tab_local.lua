@@ -211,15 +211,21 @@ local function get_formspec(tabview, name, tabdata)
 
 	-- a handheld whose game shows none of these settings gives the world list the whole width, and its buttons one row
 	if core.settings:get_bool("menu_handheld") and creative .. damage .. host == "" then
+		-- the selected world's seed, to make that world again
+		local seed = world and Settings(world.path .. DIR_DELIM .. "map_meta.txt"):get("seed")
 		retval = retval ..
 				"container[0.375,0.375]" ..
 				"label[0,0.2;" .. fgettext("Select World:") .. "]" ..
-				"textlist[0,0.5;" .. tabview.width - 0.75 .. ",4.95;sp_worlds;" ..
+				"textlist[0,0.5;" .. tabview.width - 0.75 .. ",4.4;sp_worlds;" ..
 				menu_render_worldlist() ..
 				";" .. index .. "]" ..
+				(seed and "label[0,5.2;" .. fgettext("Seed: $1", seed) .. "]" or "") ..
 				"container_end[]"
 		if world then
-			retval = retval .. "button[0.375,5.925;3.225,0.8;world_delete;" .. fgettext("Delete") .. "]"
+			retval = retval .. "button[0.375,5.925;3.14375,0.8;world_delete;" .. fgettext("Delete") .. "]"
+		end
+		if seed then
+			retval = retval .. "button[3.61875,5.925;3.14375,0.8;world_recreate;" .. fgettext("Re-create") .. "]"
 		end
 		retval = retval .. "button[6.8625,5.925;3.225,0.8;world_create;" .. fgettext("New") .. "]"
 		if world then
@@ -426,9 +432,14 @@ local function main_button_handler(this, fields, name, tabdata)
 		return true
 	end
 
-	if fields["world_create"] ~= nil then
+	if fields["world_create"] ~= nil or fields["world_recreate"] ~= nil then
 		this.dlg_create_world_closed_at = 0
-		local create_world_dlg = create_create_world_dlg()
+		local from
+		if fields["world_recreate"] then
+			local selected = core.get_textlist_index("sp_worlds")
+			from = selected and menudata.worldlist:get_list()[selected]
+		end
+		local create_world_dlg = create_create_world_dlg(from)
 		create_world_dlg:set_parent(this)
 		this:hide()
 		create_world_dlg:show()

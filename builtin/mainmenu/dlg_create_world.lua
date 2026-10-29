@@ -505,7 +505,8 @@ local function create_world_buttonhandler(this, fields)
 end
 
 
-function create_create_world_dlg()
+-- from_world: Minecraft's Re-create, the new world starts with that world's seed and game mode
+function create_create_world_dlg(from_world)
 	local retval = dialog_create("sp_create_world",
 					create_world_formspec,
 					create_world_buttonhandler,
@@ -528,6 +529,14 @@ function create_create_world_dlg()
 			flat = core.settings:get_flags("mgflat_spflags"),
 		}
 	}
+
+	if from_world then
+		local conf = Settings(from_world.path .. DIR_DELIM .. "world.mt")
+		retval.data.seed = Settings(from_world.path .. DIR_DELIM .. "map_meta.txt"):get("seed") or ""
+		retval.data.creative = conf:get_bool("creative_mode", false)
+		retval.data.mode_change = conf:get_bool("allow_mode_change", false)
+		retval.data.bonus_chest = conf:get_bool("bonus_chest", false)
+	end
 
 	return retval
 end
