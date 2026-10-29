@@ -2876,6 +2876,9 @@ int ObjectRef::l_set_lighting(lua_State *L)
 			lighting.bloom_radius          = getfloatfield_default(L, -1, "radius",          lighting.bloom_radius);
 		}
 		lua_pop(L, 1); // bloom
+
+		lighting.night_vision = rangelim(getfloatfield_default(L, 2, "night_vision", lighting.night_vision),
+				0.0f, 1.0f);
 }
 
 	getServer(L)->setLighting(player, lighting);
@@ -2930,6 +2933,8 @@ int ObjectRef::l_get_lighting(lua_State *L)
 	lua_pushnumber(L, lighting.bloom_radius);
 	lua_setfield(L, -2, "radius");
 	lua_setfield(L, -2, "bloom");
+	lua_pushnumber(L, lighting.night_vision);
+	lua_setfield(L, -2, "night_vision");
 	return 1;
 }
 

@@ -9695,6 +9695,9 @@ You **must not** mix names and track numbers to refer to the same animation.
             * Currently, bloom `intensity` and `strength_factor` affect volumetric
               lighting `strength` and vice versa. This behavior is to be changed
               in the future, do not rely on it.
+      * `night_vision`: from 0 (off, default) to 1, everything the player sees
+        as lit as its brightest light, faces still shaded (Minecraft's Night
+        Vision; handheld fork)
 
 * `get_lighting()`: returns the current state of lighting for the player.
     * Result is a table with the same fields as `light_definition` in `set_lighting`.

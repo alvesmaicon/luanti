@@ -2078,6 +2078,8 @@ void Server::SendSetLighting(session_t peer_id, const Lighting &lighting)
 
 	pkt << lighting.shadow_direction;
 
+	pkt << lighting.night_vision;
+
 	Send(&pkt);
 }
 

@@ -1923,5 +1923,10 @@ void Client::handleCommand_SetLighting(NetworkPacket *pkt)
 			break;
 		// >= 5.16.0-dev
 		*pkt >> lighting.shadow_direction;
+
+		if (!pkt->hasRemainingBytes())
+			break;
+		// handheld
+		*pkt >> lighting.night_vision;
 	} while (0);
 }

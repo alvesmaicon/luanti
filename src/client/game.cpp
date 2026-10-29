@@ -101,6 +101,7 @@ class GameGlobalShaderUniformSetter : public IShaderUniformSetter
 	CachedPixelShaderSetting<float> m_bloom_strength_pixel{"bloomStrength"};
 	CachedPixelShaderSetting<float> m_bloom_radius_pixel{"bloomRadius"};
 	CachedPixelShaderSetting<float> m_saturation_pixel{"saturation"};
+	CachedPixelShaderSetting<float> m_night_vision{"nightVision"};
 	bool m_volumetric_light_enabled;
 	CachedPixelShaderSetting<float, 3>
 		m_sun_position_pixel{"sunPositionScreen"};
@@ -213,6 +214,9 @@ public:
 
 		float saturation = lighting.saturation;
 		m_saturation_pixel.set(&saturation, services);
+
+		float night_vision = lighting.night_vision;
+		m_night_vision.set(&night_vision, services);
 
 		if (m_volumetric_light_enabled) {
 			// Map directional light to screen space

@@ -53,4 +53,6 @@ struct Lighting
 	float bloom_strength_factor {1.0f};
 	float bloom_radius {1.0f};
 	v3f shadow_direction;
+	/// @brief Night Vision: 0 none, 1 everything as lit as the brightest light
+	float night_vision {0.0f};
 };
