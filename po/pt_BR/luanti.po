@@ -1084,6 +1084,14 @@ msgstr "Permitir trocar de modo"
 msgid "Bonus chest"
 msgstr "Baú inicial"
 
+#: builtin/mainmenu/tab_local.lua
+msgid "Seed: $1"
+msgstr "Semente: $1"
+
+#: builtin/mainmenu/tab_local.lua
+msgid "Re-create"
+msgstr "Recriar"
+
 #: src/client/game.cpp
 msgid "Loading terrain..."
 msgstr "Carregando terreno..."

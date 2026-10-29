@@ -944,7 +944,8 @@ menu_theme (Menu theme) enum light dark,light
 
 #    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,
 #    nothing from ContentDB, no Select Mods, and a new world asks only for its name, seed and game
-#    mode (it keeps the game's mapgen).
+#    mode (it keeps the game's mapgen). The selected world shows its seed, and Re-create makes a new
+#    world with that seed and game mode.
 menu_handheld (Handheld main menu) bool false
 
 [**HUD]
