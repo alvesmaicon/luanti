@@ -1817,9 +1817,13 @@ void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server, bool 
 {
 	ClientMap &map = m_env.getClientMap();
 	map.markLodDirty(blockpos);
-	if (ack_to_server && map.skipDetailMesh(m_mesh_grid.getMeshPos(blockpos))) {
-		m_far_blocks_to_ack.push_back(blockpos);
-		ack_to_server = false;
+	// Far from the player, who is placed before the map's camera is: the first blocks come in the same step
+	if (ack_to_server && m_player_pos_received) {
+		const v3f from = m_env.getLocalPlayer()->getPosition();
+		if (map.skipDetailMesh(m_mesh_grid.getMeshPos(blockpos), &from)) {
+			m_far_blocks_to_ack.push_back(blockpos);
+			ack_to_server = false;
+		}
 	}
 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, true);
 }
