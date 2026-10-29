@@ -458,6 +458,8 @@ bool Game::startup(volatile std::sig_atomic_t *kill,
 	m_first_loop_after_window_activation = true;
 
 	g_client_translations->clear();
+	// before any block mesh: loadTerrain() makes them before the game runs
+	set_light_curve(g_settings->getFloat("display_gamma"));
 
 	// with the terrain to wait for (a local game, see loadTerrain), the steps before it fill the first 60 %
 	if (g_settings->getS16("loading_terrain_radius") > 0 && start_data.address.empty())
@@ -499,8 +501,6 @@ void Game::run()
 	}
 
 	draw_times.reset();
-
-	set_light_curve(g_settings->getFloat("display_gamma"));
 
 	m_touch_simulate_aux1 = g_settings->getBool("fast_move")
 			&& client->checkPrivilege("fast");
