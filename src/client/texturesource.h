@@ -104,6 +104,9 @@ public:
 	/// @brief Return average color of a texture string
 	virtual video::SColor getTextureAverageColor(const std::string &image)=0;
 
+	/// @brief Whether every pixel of a texture string is opaque
+	virtual bool isTextureOpaque(const std::string &image)=0;
+
 	// Note: this method is here because caching is the decision of the
 	// API user, even if his access is read-only.
 
