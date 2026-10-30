@@ -428,19 +428,19 @@ bool ClientMap::useLod(v3s16 region_pos, f32 d, u64 now_ms)
 		return it->second.lod;
 
 	const f32 switch_d = m_cache_lod_distance * BS;
-	bool far = d > switch_d;
-	if (!far && it != m_lod_regions.end() && it->second.lod) {
+	bool distant = d > switch_d;
+	if (!distant && it != m_lod_regions.end() && it->second.lod) {
 		// Shown simplified, it shows detail again a bit closer, once its detail meshes are made
 		LodRegion &region = it->second;
 		if (d > switch_d - LOD_HYSTERESIS * BS) {
-			far = true;
+			distant = true;
 		} else {
 			if (!region.near_ms)
 				region.near_ms = now_ms;
-			far = now_ms < region.near_ms + 3000 && !detailMeshesMade(region_pos);
+			distant = now_ms < region.near_ms + 3000 && !detailMeshesMade(region_pos);
 		}
 	}
-	if (!far) {
+	if (!distant) {
 		if (it != m_lod_regions.end()) {
 			it->second.lod = false;
 			it->second.near_ms = 0;
