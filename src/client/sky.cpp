@@ -45,6 +45,20 @@ static inline void disableTextureFiltering(video::SMaterial &mat)
 	});
 }
 
+// A sun or moon with no transparency (Minecraft's, black around it) is added to the sky, as Minecraft draws them;
+// one with an alpha channel is blended over it
+static void setSkyBodyBlend(video::SMaterial &mat, bool add)
+{
+	if (!add) {
+		mat.MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
+		return;
+	}
+	mat.MaterialType = video::EMT_ONETEXTURE_BLEND;
+	mat.MaterialTypeParam = video::pack_textureBlendFunc(video::EBF_ONE, video::EBF_ONE,
+			video::EMFN_MODULATE_1X, video::EAS_TEXTURE | video::EAS_VERTEX_COLOR);
+	mat.BlendOperation = video::EBO_ADD;
+}
+
 Sky::Sky(s32 id, RenderingEngine *rendering_engine, ITextureSource *tsrc, IShaderSource *ssrc) :
 		scene::ISceneNode(rendering_engine->get_scene_manager()->getRootSceneNode(),
 			rendering_engine->get_scene_manager(), id)
@@ -750,7 +764,7 @@ void Sky::setSunTexture(const std::string &sun_texture,
 	if (m_sun_texture) {
 		m_materials[3] = baseMaterial();
 		m_materials[3].setTexture(0, m_sun_texture);
-		m_materials[3].MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
+		setSkyBodyBlend(m_materials[3], tsrc->isTextureOpaque(sun_texture));
 		disableTextureFiltering(m_materials[3]);
 	}
 }
@@ -793,7 +807,7 @@ void Sky::setMoonTexture(const std::string &moon_texture,
 	if (m_moon_texture) {
 		m_materials[4] = baseMaterial();
 		m_materials[4].setTexture(0, m_moon_texture);
-		m_materials[4].MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
+		setSkyBodyBlend(m_materials[4], tsrc->isTextureOpaque(moon_texture));
 		disableTextureFiltering(m_materials[4]);
 	}
 }

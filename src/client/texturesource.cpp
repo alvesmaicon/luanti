@@ -116,6 +116,8 @@ public:
 
 	video::SColor getTextureAverageColor(const std::string &name);
 
+	bool isTextureOpaque(const std::string &name);
+
 	core::dimension2du getTextureDimensions(const std::string &image);
 
 	void setImageCaching(bool enabled);
@@ -652,6 +654,27 @@ video::SColor TextureSource::getTextureAverageColor(const std::string &name)
 	image->drop();
 
 	return c;
+}
+
+bool TextureSource::isTextureOpaque(const std::string &name)
+{
+	assert(std::this_thread::get_id() == m_main_thread);
+	if (name.empty())
+		return false;
+
+	std::set<std::string> unused;
+	auto *image = getOrGenerateImage(name, unused);
+	if (!image)
+		return false;
+
+	bool opaque = true;
+	const core::dimension2du dim = image->getDimension();
+	for (u32 y = 0; y < dim.Height && opaque; y++)
+		for (u32 x = 0; x < dim.Width && opaque; x++)
+			opaque = image->getPixel(x, y).getAlpha() == 255;
+	image->drop();
+
+	return opaque;
 }
 
 core::dimension2du TextureSource::getTextureDimensions(const std::string &name)
