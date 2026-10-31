@@ -695,19 +695,27 @@ void Camera::setDigging(s32 button)
 	}
 }
 
-void Camera::wield(const ItemStack &item, bool animate, bool arm)
+void Camera::wield(const ItemStack &item, bool animate, bool arm, u16 slot)
 {
-	if (item.name != m_wield_item_next.name ||
-			item.metadata != m_wield_item_next.metadata || arm != m_wield_arm_next) {
-		m_wield_item_next = item;
-		m_wield_arm_next = arm;
-		m_wield_map_next = !arm &&
-				itemgroup_get(item.getDefinition(m_client->idef()).groups, "held_map") > 0;
-
-		m_wield_changing = animate;
-		if (!animate)
-			updateWieldedTool();
+	// the same item in the same slot with other metadata (a compass's needle) is redrawn in the hand, as
+	// Minecraft's compass turns
+	if (item.name == m_wield_item_next.name && arm == m_wield_arm_next && slot == m_wield_slot_next) {
+		if (item.metadata != m_wield_item_next.metadata) {
+			m_wield_item_next = item;
+			if (!m_wield_changing)
+				updateWieldedTool();
+		}
+		return;
 	}
+	m_wield_item_next = item;
+	m_wield_arm_next = arm;
+	m_wield_slot_next = slot;
+	m_wield_map_next = !arm &&
+			itemgroup_get(item.getDefinition(m_client->idef()).groups, "held_map") > 0;
+
+	m_wield_changing = animate;
+	if (!animate)
+		updateWieldedTool();
 }
 
 void Camera::drawWieldedTool(core::matrix4* translation)

@@ -157,8 +157,8 @@ public:
 	void setDigging(s32 button);
 
 	// Replace the wielded item mesh
-	// arm: the hand is empty, drawn as Minecraft's arm
-	void wield(const ItemStack &item, bool animate = true, bool arm = false);
+	// arm: the hand is empty, drawn as Minecraft's arm; slot: the hotbar slot it is in
+	void wield(const ItemStack &item, bool animate = true, bool arm = false, u16 slot = 0);
 
 	// The wielded item was used up a little (a node placed): it drops and comes back up
 	void itemUsed() { m_height_tick = 0.0f; }
@@ -294,6 +294,7 @@ private:
 	bool m_wield_changing = false;
 	ItemStack m_wield_item_next;
 	bool m_wield_arm_next = false;
+	u16 m_wield_slot_next = 0;
 	bool m_wield_map = false, m_wield_map_next = false;
 	std::string m_arm_skin;
 
