@@ -9,7 +9,7 @@
 
 ## This fork: Luanti for handhelds
 
-`handheld/5.17` is Luanti 5.17.0 plus changes for weak hardware: an old GLES 2.0 GPU, a few hundred MB of RAM, a small screen. It is developed and measured on a GA36-MB handheld (an R36S clone: Allwinner A33, 4x Cortex-A7 at 1.2 GHz, Mali-400 through Mesa's lima driver, 512 MB of RAM, 640x480 screen), where it ships with [goodluckOS](https://github.com/alvesmaicon/goodluckOS).
+`handheld/5.18` is Luanti 5.18.0 plus changes for weak hardware (`handheld/5.17` has them on 5.17.0): an old GLES 2.0 GPU, a few hundred MB of RAM, a small screen. It is developed and measured on a GA36-MB handheld (an R36S clone: Allwinner A33, 4x Cortex-A7 at 1.2 GHz, Mali-400 through Mesa's lima driver, 512 MB of RAM, 640x480 screen), where it ships with [goodluckOS](https://github.com/alvesmaicon/goodluckOS).
 
 This fork is not affiliated with the Luanti project. The changes were written with AI assistance (Claude). Luanti's [AI policy](doc/developing/ai_policy.md) doesn't accept that kind of contribution, so none of it is proposed upstream as a pull request. Small fixes that upstream could take are tracked as [issues labeled "upstream candidate"](https://github.com/alvesmaicon/luanti/issues?q=label%3A%22upstream+candidate%22).
 
@@ -23,6 +23,8 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 | Lake view, 320x240 | 3.4 FPS, 1.52 M vertices, 1,319 draw calls. 11 MB of RAM free, 54 MB in swap | 10 FPS, 0.53 M vertices, 560 draw calls. 177 MB free, no swap | Simplified meshes past 208 nodes |
 | Lake view, 640x480 | | 10.5-11 FPS, 0.38 M vertices, 167 MB free | This branch's defaults (simplified past 160 nodes) |
 | Forest, 640x480 | | 20 FPS | |
+
+These were measured with `handheld/5.17`. `handheld/5.18` draws the same scenes from the same simplified meshes; in a desktop build on Mesa llvmpipe, in the forest at viewing range 128, it runs 15-20 % faster than `handheld/5.17` and has the terrain in view loaded in 0.8 s instead of 1.1 s.
 
 ![The handheld at the lake, 320x240: simplified far meshes off and on](doc/handheld/lake.png)
 
@@ -40,11 +42,11 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 
 | Change | Setting (default here) |
 | --- | --- |
+| A block is acknowledged to the server as it arrives, not once its mesh is made, so a slow CPU gets the next blocks sooner (Luanti 5.19-dev, taken early) | |
 | On KMSDRM with no cursor plane, the gamepad drives a drawn cursor in menus | |
 | GLES 2.0: 2D batches drawn with `glDrawElements`, so menus have text ([#2](https://github.com/alvesmaicon/luanti/issues/2)) | |
 | Text converted with UCS-4, which minimal glibc builds have built in ([#3](https://github.com/alvesmaicon/luanti/issues/3)) | |
 | Fixed-size formspecs fit screens under 800x600 ([#4](https://github.com/alvesmaicon/luanti/issues/4)) | |
-| Index buffers created on `GL_ELEMENT_ARRAY_BUFFER`, so lima caches their index range ([#5](https://github.com/alvesmaicon/luanti/issues/5)) | |
 | Fog without overflow on mediump-only GPUs ([#6](https://github.com/alvesmaicon/luanti/issues/6)) | |
 | Per-vertex fog in the nodes shader ([#1](https://github.com/alvesmaicon/luanti/issues/1)) | |
 | Nodes drawn as opaque cubes occlude (leaves with `leaves_style = opaque`) | |
@@ -67,7 +69,7 @@ All runs use viewing range 320 and Minetest Game. Each pair uses the same world 
 | The item in hand changes as in Minecraft, down and back up in 0.3 s (the same item whose metadata alone changes, a compass's needle, is redrawn in place), and a node placed makes it drop and come back; walking bobs the view and the hands as Minecraft does, footsteps at its pace (`view_bobbing_amount` 1.0 is Minecraft's) | |
 | Music as Minecraft plays it, from the user's own files: the tracks of `<user path>/music/<set>/*.ogg` (menu, game, creative, water), streamed from the file, one at a time, 10 to 20 minutes apart in a game and 1 to 30 s on the menu, at `music_volume` | |
 
-Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
+Two changes of `handheld/5.17` are in Luanti 5.18 itself: index buffers created on `GL_ELEMENT_ARRAY_BUFFER` ([#5](https://github.com/alvesmaicon/luanti/issues/5)), and the light curve set before the terrain loads. Every change has its reasons and measurements in its commit message. To get upstream's behavior back, set `client_lod_distance = 0` and `client_unload_out_of_view = false`.
 
 ### Settings for weak GPUs
 
