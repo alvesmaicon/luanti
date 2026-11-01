@@ -146,15 +146,16 @@ local function find(list, key)
 	return 1, list[1]
 end
 
-local function on_off(value)
-	return value and fgettext("On") or fgettext("Off")
-end
-
--- a label on the left and its switch on the right, as Minecraft's World tab
+-- a label on the left and a switch on the right, the whole row its button: "On" and "Off" didn't fit in every
+-- language
 local function switch_row(y, name, label, value, x, w)
 	x, w = x or 3.75, w or 8
-	return ("label[%g,%g;%s]button[%g,%g;1.5,0.8;%s;%s]"):format(x, y + 0.4, label, x + w - 1.5, y, name,
-			on_off(value))
+	local sx = x + w - 1.3
+	return ("label[%g,%g;%s]box[%g,%g;1.3,0.62;%s]box[%g,%g;1.2,0.52;%s]box[%g,%g;0.42,0.42;%s]"):format(x, y + 0.4,
+			label, sx, y + 0.09, value and "#6CC46CFF" or "#808080FF", sx + 0.05, y + 0.14,
+			value and "#3A873AFF" or "#1E1E1EFF", value and sx + 0.78 or sx + 0.1, y + 0.19,
+			value and "#FFFFFFFF" or "#9A9A9AFF") ..
+			("style[%s;border=false]button[%g,%g;%g,0.8;%s;]"):format(name, x, y, w, name)
 end
 
 -- the switches in two columns, under the single biome's button
@@ -202,8 +203,7 @@ local function handheld_formspec(data)
 		fs[#fs + 1] = ("button[3.75,2.1;8,0.8;btn_game_mode;%s]"):format(fgettext("Game mode: $1",
 				fgettext_ne(data.creative and "Creative" or "Survival")))
 		fs[#fs + 1] = ("button[3.75,3.1;8,0.8;btn_difficulty;%s]"):format(fgettext("Difficulty: $1", difficulty[2]))
-		fs[#fs + 1] = ("button[3.75,4.1;8,0.8;btn_mode_change;%s]"):format(fgettext("Allow changing the game mode: $1",
-				data.mode_change and fgettext_ne("On") or fgettext_ne("Off")))
+		fs[#fs + 1] = switch_row(4.1, "btn_mode_change", fgettext("Allow changing the game mode"), data.mode_change)
 	elseif data.tab == 2 then
 		local _, wtype = find(WORLD_TYPES, data.world_type)
 		fs[#fs + 1] = ("button[3.75,0.5;5,0.8;btn_world_type;%s]"):format(fgettext("World type: $1", wtype[2]))

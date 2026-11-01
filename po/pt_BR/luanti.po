@@ -1132,10 +1132,6 @@ msgid "Hard"
 msgstr "Difícil"
 
 #: builtin/mainmenu/dlg_create_world.lua
-msgid "Allow changing the game mode: $1"
-msgstr "Permitir trocar de modo: $1"
-
-#: builtin/mainmenu/dlg_create_world.lua
 msgid "World type: $1"
 msgstr "Tipo de mundo: $1"
 
