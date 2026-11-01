@@ -3,6 +3,7 @@
 CATEGORY=Games
 NAME=Luanti
 DESCRIPTION=A world of blocks: build, mine, craft and survive
+DESCRIPTION_pt-BR=Um mundo de blocos: construa, minere, fabrique e sobreviva
 COMMAND=sh run.sh
 ICON=icon.png
 VERSION=@VERSION@
@@ -11,6 +12,7 @@ VERSION=@VERSION@
 CATEGORY=Games
 NAME=Minecraft look for Luanti
 DESCRIPTION=Gives Luanti the textures, sounds and music of your own Minecraft, from a copy of .minecraft in HOME
+DESCRIPTION_pt-BR=Dá ao Luanti as texturas, os sons e as músicas do seu Minecraft, a partir de uma cópia do .minecraft na HOME
 TERMINAL=1
 COMMAND=sh mc-import.sh
 ICON=icon.png
