@@ -308,6 +308,20 @@ static v3f water_flow(Map *map, const NodeDefManager *nodemgr, v3s16 p, MapNode 
 	return flow;
 }
 
+// Any node of water in the box, its level aside, as Minecraft's containsAnyLiquid
+static bool water_in_box(Map *map, const NodeDefManager *nodemgr, const aabb3f &box)
+{
+	const v3s16 p0 = floatToInt(box.MinEdge + 0.001f * BS, BS);
+	const v3s16 p1 = floatToInt(box.MaxEdge - 0.001f * BS, BS);
+	v3s16 p;
+	for (p.X = p0.X; p.X <= p1.X; p.X++)
+	for (p.Y = p0.Y; p.Y <= p1.Y; p.Y++)
+	for (p.Z = p0.Z; p.Z <= p1.Z; p.Z++)
+		if (is_water(nodemgr->get(map->getNode(p))))
+			return true;
+	return false;
+}
+
 void LocalPlayer::updateWater(Map *map, const NodeDefManager *nodemgr, const v3f &position)
 {
 	water_depth = 0.0f;
@@ -352,7 +366,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 
 	// Temporary option for old move code
 	if (!physics_override.new_move) {
-		water_move = m_water_air = gliding = false;
+		water_move = water_jump = m_water_air = gliding = false;
 		old_move(dtime, env, collision_info);
 		return;
 	}
@@ -416,7 +430,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 		if (is_valid_position) {
 			const ContentFeatures &cf = nodemgr->get(node.getContent());
 			in_liquid = cf.liquid_move_physics && !is_water(cf);
-			move_resistance = cf.move_resistance;
+			move_resistance = is_water(cf) ? 0 : cf.move_resistance;
 		} else {
 			in_liquid = false;
 		}
@@ -428,7 +442,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 		if (is_valid_position) {
 			const ContentFeatures &cf = nodemgr->get(node.getContent());
 			in_liquid = cf.liquid_move_physics && !is_water(cf);
-			move_resistance = cf.move_resistance;
+			move_resistance = is_water(cf) ? 0 : cf.move_resistance;
 		} else {
 			in_liquid = false;
 		}
@@ -467,6 +481,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 	}
 
 	water_move = water_depth > 0.0f && !free_move && !is_climbing;
+	water_jump = water_jump && water_move;
 
 	// Player object property step height is multiplied by BS in
 	// /src/script/common/c_content.cpp and /src/content_sao.cpp
@@ -491,15 +506,16 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 		&position, &m_speed, accel_f, m_cao, true, step_up_mode);
 
 	// As in Minecraft, pushing on a wall at the surface lifts the player, at 0.3 a tick in its air,
-	// when the box 0.6 higher (and a tick on) has no water and nothing solid
+	// when the box 0.6 higher (and a tick on) touches no node of water and nothing solid
 	if (water_move) {
 		bool wall = false;
 		for (const auto &colinfo : result.collisions)
 			wall |= colinfo.type == COLLISION_NODE && colinfo.axis != COLLISION_AXIS_Y;
-		if (wall && water_depth <= 0.6f + m_speed.Y / (20.0f * BS) &&
-				!collision_check_intersection(env, m_client, m_collisionbox,
-				position + v3f(0.0f, 0.6f * BS, 0.0f), m_cao))
-			m_speed.Y = getAirSpeed(0.3f);
+		const v3f above = position + v3f(0.0f, 0.6f * BS + m_speed.Y / 20.0f, 0.0f);
+		if (wall && !water_in_box(map, nodemgr, aabb3f(above + m_collisionbox.MinEdge,
+				above + m_collisionbox.MaxEdge)) &&
+				!collision_check_intersection(env, m_client, m_collisionbox, above, m_cao))
+			m_speed.Y = std::max(m_speed.Y, getAirSpeed(0.3f));
 	}
 
 	// As in Minecraft, hitting a wall while gliding hurts: 10 a block a tick of speed lost, less 3. Not the
@@ -1101,14 +1117,19 @@ void LocalPlayer::applyWaterControl(float dtime, Environment *env)
 
 	// v = (v + steer * (look - v) + push) * 0.8 - sink
 	f32 push = m_water_current.Y;
+	water_jump = water_jump && m_speed.Y > 0.0f;
 	if (control.jump && !m_disable_jump && (!touching_ground || water_depth > 0.4f)) {
 		push += 0.04f;
 		swimming_vertical = true;
 	} else if (control.jump && m_can_jump && m_jump_delay <= 0.0f) {
 		m_speed.Y = getJumpSpeed();
 		m_jump_delay = 0.5f;
+		water_jump = true;
 		m_client->getEventManager()->put(new SimpleTriggerEvent(MtEvent::PLAYER_JUMP));
 	}
+	// Minecraft's jump from the bed of shallow water is out of it in a tick: it rises in the air (ClientEnvironment)
+	if (water_jump)
+		return;
 	if (control.sneak && !m_disable_descend) {
 		push -= 0.04f;
 		swimming_vertical = true;

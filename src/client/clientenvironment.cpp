@@ -126,7 +126,9 @@ void ClientEnvironment::step(float dtime)
 
 		// Apply physics (Minecraft's water and glide have their own, in applyControl)
 		lplayer->gravity = 0;
-		if (!free_move && !lplayer->water_move && !lplayer->gliding) {
+		if (lplayer->water_jump && !lplayer->gliding) {
+			lplayer->gravity = lplayer->getAirGravity(dtime_part);
+		} else if (!free_move && !lplayer->water_move && !lplayer->gliding) {
 			// Gravity, Minecraft's air
 			if (!is_climbing && !lplayer->in_liquid)
 				lplayer->gravity = lplayer->getAirGravity(dtime_part);

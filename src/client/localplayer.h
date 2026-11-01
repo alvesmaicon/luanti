@@ -69,6 +69,8 @@ public:
 	// Minecraft's fall distance at a landing since a glide, else negative
 	f32 landing_fall = -1.0f;
 	void resetFallDistance() { m_fall_distance = -1.0f; }
+	// Rising from a jump off the bed of shallow water, in the air's physics
+	bool water_jump = false;
 
 	f32 gravity = 0; // total downwards acceleration
 
