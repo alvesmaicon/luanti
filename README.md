@@ -53,6 +53,7 @@ These were measured with `handheld/5.17`. `handheld/5.18` draws the same scenes 
 | Blocks out of view are unloaded too; blocks are kept alive even below 5 FPS ([#7](https://github.com/alvesmaicon/luanti/issues/7)) | `client_unload_out_of_view` (true), `client_unload_unused_data_timeout` (120) |
 | Far regions of 2x2x2 mapblocks are drawn from one simplified mesh (one cube per 2x2x2 nodes, equal faces merged), with no detail meshes far away | `client_lod_distance` (160, 0 turns it off) |
 | The New World dialog picks the game mode, Survival or Creative, with a button as in Minecraft, and can allow changing it in game | |
+| The handheld's New World dialog is laid out as Minecraft's: a Game tab (name, game mode, difficulty), a World tab (world type, its options on a Customize page, seed, structures, bonus chest) and a More tab (game rules). Its world types are mapgen settings (Superflat is `flat`, Large biomes widens the heat and humidity noises 4 times, Amplified raises v7's hills and mountains, Single biome holds heat and humidity at one biome's point), and a world's rules hold for its session as the settings they stand for (world.mt's `setting.<name>`, a fixed list; the user's own come back at shutdown) | `menu_handheld` (true) |
 | A main menu without what needs a network or a keyboard | `menu_handheld` (true) |
 | On KMSDRM, an on-screen keyboard for the gamepad types into any text field | |
 | Settings open on a Video page with the render distance in chunks | `menu_handheld` (true) |
