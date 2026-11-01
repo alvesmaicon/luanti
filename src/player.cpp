@@ -183,7 +183,8 @@ u32 PlayerControl::getKeysPressed() const
 		( (u32)(sneak & 1) << 6) |
 		( (u32)(dig   & 1) << 7) |
 		( (u32)(place & 1) << 8) |
-		( (u32)(zoom  & 1) << 9)
+		( (u32)(zoom  & 1) << 9) |
+		( (u32)(glide & 1) << 10)
 	;
 
 	if (isMoving()) {
@@ -210,6 +211,7 @@ void PlayerControl::unpackKeysPressed(u32 keypress_bits)
 	dig   = keypress_bits & (1 << 7);
 	place = keypress_bits & (1 << 8);
 	zoom  = keypress_bits & (1 << 9);
+	glide = keypress_bits & (1 << 10);
 }
 
 v2f PlayerControl::getMovement() const
@@ -224,7 +226,7 @@ static auto tie(const PlayerPhysicsOverride &o)
 	o.speed, o.jump, o.gravity, o.sneak, o.sneak_glitch, o.new_move, o.speed_climb,
 	o.speed_crouch, o.liquid_fluidity, o.liquid_fluidity_smooth, o.liquid_sink,
 	o.acceleration_default, o.acceleration_air, o.speed_fast, o.acceleration_fast,
-	o.speed_walk, o.swim
+	o.speed_walk, o.swim, o.glide, o.glide_boost, o.glide_boost_id
 	);
 }
 

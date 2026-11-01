@@ -4,6 +4,7 @@
 
 #include "localplayer.h"
 #include <cmath>
+#include <algorithm>
 #include "mtevent.h"
 #include "collision.h"
 #include "nodedef.h"
@@ -351,7 +352,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 
 	// Temporary option for old move code
 	if (!physics_override.new_move) {
-		water_move = m_water_air = false;
+		water_move = m_water_air = gliding = false;
 		old_move(dtime, env, collision_info);
 		return;
 	}
@@ -376,6 +377,8 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 	bool free_move = player_settings.free_move && fly_allowed;
 
 	if (noclip && free_move) {
+		gliding = false;
+		m_fall_distance = -1.0f;
 		position += m_speed * dtime;
 		setPosition(position);
 
@@ -499,8 +502,22 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 			m_speed.Y = getAirSpeed(0.3f);
 	}
 
+	// As in Minecraft, hitting a wall while gliding hurts: 10 a block a tick of speed lost, less 3. Not the
+	// edge of what has loaded, where Minecraft's player just waits
+	if (gliding) {
+		bool wall = false;
+		for (const auto &colinfo : result.collisions)
+			wall |= colinfo.axis != COLLISION_AXIS_Y && (colinfo.type != COLLISION_NODE ||
+					map->getNode(colinfo.node_p).getContent() != CONTENT_IGNORE);
+		if (wall) {
+			const f32 before = v3f(initial_speed.X, 0.0f, initial_speed.Z).getLength();
+			const f32 after = v3f(m_speed.X, 0.0f, m_speed.Z).getLength();
+			glide_wall_damage += std::max((before - after) / (20.0f * BS) * 10.0f - 3.0f, 0.0f);
+		}
+	}
+
 	bool could_sneak = control.sneak && !free_move && !in_liquid &&
-		!is_climbing && physics_override.sneak;
+		!is_climbing && physics_override.sneak && !gliding;
 
 	// Add new collisions to the vector
 	if (collision_info && !free_move) {
@@ -543,6 +560,24 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 		m_water_air = true;
 	else if (touching_ground || free_move || is_climbing || in_liquid)
 		m_water_air = false;
+
+	// The glide ends on the ground, in a liquid, climbing, flying or when the server takes it away
+	if (gliding && (touching_ground || in_liquid || water_move || is_climbing || free_move ||
+			!physics_override.glide))
+		stopGlide(touching_ground);
+	// Minecraft's fall distance: what the player went down, back to 1 while a glide goes down slower
+	// than half a block a tick; water and ladders end it, the ground lands it
+	if (m_fall_distance >= 0.0f) {
+		m_fall_distance += std::max(initial_position.Y - position.Y, 0.0f) / BS;
+		if (gliding && m_speed.Y > -0.5f * 20.0f * BS)
+			m_fall_distance = std::min(m_fall_distance, 1.0f);
+		if (in_liquid || water_move || is_climbing || free_move) {
+			m_fall_distance = -1.0f;
+		} else if (touching_ground) {
+			landing_fall = m_fall_distance;
+			m_fall_distance = -1.0f;
+		}
+	}
 
 	// Max. distance (X, Z) over border for sneaking determined by collision box
 	// * 0.49 to keep the center just barely on the node
@@ -687,7 +722,8 @@ void LocalPlayer::move(f32 dtime, Environment *env,
 	m_can_jump = m_can_jump && jumpspeed != 0.0f;
 
 	// Autojump
-	handleAutojump(dtime, env, result, initial_position, initial_speed);
+	if (!gliding)
+		handleAutojump(dtime, env, result, initial_position, initial_speed);
 }
 
 void LocalPlayer::move(f32 dtime, Environment *env)
@@ -707,10 +743,51 @@ void LocalPlayer::applyControl(float dtime, Environment *env)
 	// Minecraft counts the wait between jumps only while jump is held
 	m_jump_delay = control.jump ? m_jump_delay - dtime : 0.0f;
 
+	// A rocket's boost starts with each new id of the server's, and its ticks go by also while not gliding
+	if (physics_override.glide_boost_id != m_glide_boost_id) {
+		const u8 added = physics_override.glide_boost_id - m_glide_boost_id;
+		m_glide_boost_id = physics_override.glide_boost_id;
+		for (u8 i = 0; i < std::min<u8>(added, 4) && physics_override.glide_boost > 0; i++)
+			m_glide_boosts.push_back(physics_override.glide_boost);
+	}
+	if (!m_glide_boosts.empty()) {
+		if (!gliding) {
+			m_glide_time += dtime;
+			for (; m_glide_time >= 0.05f; m_glide_time -= 0.05f)
+				for (u16 &left : m_glide_boosts)
+					left -= left > 0;
+		}
+		m_glide_boosts.erase(std::remove(m_glide_boosts.begin(), m_glide_boosts.end(), 0),
+				m_glide_boosts.end());
+	}
+
+	// Minecraft's elytra: a new press of jump in the air starts a glide, not in a liquid, climbing or flying
+	const bool jump_pressed = control.jump && !m_jump_was;
+	m_jump_was = control.jump;
+	if (!gliding && jump_pressed && physics_override.glide && physics_override.new_move && !touching_ground &&
+			!in_liquid && !water_move && !is_climbing && !getParent() &&
+			!(getPlayerSettings().free_move && m_client->checkLocalPrivilege("fly")))
+		startGlide();
+	control.glide = gliding;
+
 	// Nullify speed and don't run positioning code if the player is attached
 	if (getParent()) {
+		gliding = control.glide = false;
 		setSpeed(v3f(0.0f));
 		return;
+	}
+
+	if (gliding) {
+		applyGlideControl(dtime);
+		return;
+	}
+	// Landed from a glide: Minecraft's ground friction (60 % of 91 % kept a tick) down to walking speeds
+	if (m_glide_slide && touching_ground) {
+		const f32 keep = std::pow(0.546f, 20.0f * dtime);
+		m_speed.X *= keep;
+		m_speed.Z *= keep;
+		m_glide_slide = v3f(m_speed.X, 0.0f, m_speed.Z).getLength() >
+				movement_speed_walk * physics_override.speed_walk * physics_override.speed;
 	}
 
 	if (water_move) {
@@ -1061,6 +1138,76 @@ void LocalPlayer::applyWaterAirControl(float dtime)
 	const f32 left = std::pow(0.91f, 20.0f * dtime);
 	m_speed.X = target.X + (m_speed.X - target.X) * left;
 	m_speed.Z = target.Z + (m_speed.Z - target.Z) * left;
+}
+
+void LocalPlayer::startGlide()
+{
+	gliding = true;
+	m_glide_slide = false;
+	// the first tick at once, as Minecraft glides on the tick it starts
+	m_glide_time = 0.05f;
+	// Minecraft's fall distance goes on: the fall so far, as the air gives this speed
+	if (m_fall_distance < 0.0f)
+		m_fall_distance = m_speed.Y < 0.0f ? getFallHeight(-m_speed.Y) : 0.0f;
+}
+
+void LocalPlayer::stopGlide(bool landed)
+{
+	gliding = false;
+	// on the ground Minecraft's friction stops the glide's speed, in the air Minecraft's air drags it
+	m_glide_slide = landed;
+	m_water_air = !landed;
+}
+
+// Minecraft's fall flying (LivingEntity.updateFallFlyingMovement), a tick at a time in blocks a tick: the look
+// lifts or dives, its horizontal speed turns toward where the player looks, the air keeps 99 % and 98 % of it
+void LocalPlayer::glideTick()
+{
+	v3f look(0.0f, 0.0f, 1.0f);
+	look.rotateYZBy(m_pitch);
+	look.rotateXZBy(m_yaw);
+	v3f v = m_speed / (20.0f * BS);
+
+	// each rocket on the player pulls toward 1.5 a tick along the look (FireworkRocketEntity.tick),
+	// after the tick before moved the player
+	for (u16 &left : m_glide_boosts) {
+		if (left > 0) {
+			v += look * 0.1f + (look * 1.5f - v) * 0.5f;
+			left--;
+		}
+	}
+
+	const f32 pitch = m_pitch * core::DEGTORAD;
+	const f32 hlook = std::sqrt(look.X * look.X + look.Z * look.Z);
+	const f32 hspeed = std::sqrt(v.X * v.X + v.Z * v.Z);
+	const f32 cos2 = std::cos(pitch) * std::cos(pitch);
+	const f32 g = 0.08f * physics_override.gravity;
+	v.Y += g * (-1.0f + cos2 * 0.75f);
+	if (hlook > 0.0f) {
+		if (v.Y < 0.0f) {
+			const f32 k = v.Y * -0.1f * cos2;
+			v += v3f(look.X * k / hlook, k, look.Z * k / hlook);
+		}
+		if (pitch < 0.0f) {
+			const f32 k = hspeed * -std::sin(pitch) * 0.04f;
+			v += v3f(-look.X * k / hlook, k * 3.2f, -look.Z * k / hlook);
+		}
+		v.X += (look.X / hlook * hspeed - v.X) * 0.1f;
+		v.Z += (look.Z / hlook * hspeed - v.Z) * 0.1f;
+	}
+	v *= v3f(0.99f, 0.98f, 0.99f);
+	m_speed = v * (20.0f * BS);
+}
+
+// The glide's ticks at 20 Hz, the speed between them constant: the player is where Minecraft's would be
+// at every tick
+void LocalPlayer::applyGlideControl(float dtime)
+{
+	m_glide_time += dtime;
+	while (m_glide_time >= 0.05f) {
+		m_glide_time -= 0.05f;
+		glideTick();
+	}
 }
 
 // Temporary option for old move code

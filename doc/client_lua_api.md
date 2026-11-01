@@ -798,6 +798,7 @@ Methods:
             zoom = boolean,
             dig = boolean,
             place = boolean,
+            glide = boolean,
         }
         ```
 

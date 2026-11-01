@@ -9386,6 +9386,7 @@ You **must not** mix names and track numbers to refer to the same animation.
       `place`, `LMB`, `RMB` and `zoom`.
     * The fields `LMB` and `RMB` are equal to `dig` and `place` respectively,
       and exist only to preserve backwards compatibility.
+    * `glide` is true while the client glides (physics override `glide`).
     * The table also contains the fields `movement_x` and `movement_y`.
         * They represent the movement of the player. Values are numbers in the
           range [-1.0, +1.0].
@@ -9412,6 +9413,7 @@ You **must not** mix names and track numbers to refer to the same animation.
         * 7 - dig
         * 8 - place
         * 9 - zoom
+        * 10 - glide
     * Returns `0` (no bits set) if the object is not a player.
 * `set_physics_override(override_table)`
     * Overrides the physics attributes of the player
@@ -9455,6 +9457,12 @@ You **must not** mix names and track numbers to refer to the same animation.
           is used for the specific old sneak behavior (default: `true`)
         * `swim`: Minecraft's swimming in nodes of the group `water`: faster,
           without sinking, up or down where the player looks (default: `false`)
+        * `glide`: the player may glide as with Minecraft's elytra: jump pressed
+          again in the air starts it, the ground, a liquid, a ladder or flying
+          ends it; the client reports it as the control `glide` (default: `false`)
+        * `glide_boost`: a number of 20 Hz ticks: each set starts a boost of a
+          Minecraft firework rocket for that long while gliding (the same number
+          again too); not returned by `get_physics_override`
     * Note: All numeric fields above modify a corresponding `movement_*` setting.
     * For games, we recommend for simpler code to first modify the `movement_*`
       settings (e.g. via the game's `minetest.conf`) to set a global base value

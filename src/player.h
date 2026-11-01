@@ -90,6 +90,8 @@ struct PlayerControl
 	bool zoom = false;
 	bool dig = false;
 	bool place = false;
+	// The client glides (handheld fork, Minecraft's elytra)
+	bool glide = false;
 	// Note: These two are NOT available on the server
 	float pitch = 0.0f;
 	float yaw = 0.0f;
@@ -120,6 +122,11 @@ struct PlayerPhysicsOverride
 	float speed_walk = 1.f;
 	// Minecraft's swimming in nodes of the group water
 	bool swim = false;
+	// Minecraft's elytra: the player may glide; each new glide_boost_id adds a firework rocket's boost of
+	// glide_boost ticks
+	bool glide = false;
+	u16 glide_boost = 0;
+	u8 glide_boost_id = 0;
 
 	bool operator==(const PlayerPhysicsOverride &other) const;
 	bool operator!=(const PlayerPhysicsOverride &other) const {

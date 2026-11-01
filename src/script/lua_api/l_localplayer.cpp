@@ -195,6 +195,9 @@ int LuaLocalPlayer::l_get_physics_override(lua_State *L)
 	lua_pushboolean(L, phys.swim);
 	lua_setfield(L, -2, "swim");
 
+	lua_pushboolean(L, phys.glide);
+	lua_setfield(L, -2, "glide");
+
 	return 1;
 }
 
@@ -241,13 +244,14 @@ int LuaLocalPlayer::l_get_control(lua_State *L)
 		lua_setfield(L, -2, name);
 	};
 
-	lua_createtable(L, 0, 12);
+	lua_createtable(L, 0, 13);
 	set("jump",  c.jump);
 	set("aux1",  c.aux1);
 	set("sneak", c.sneak);
 	set("zoom",  c.zoom);
 	set("dig",   c.dig);
 	set("place", c.place);
+	set("glide", c.glide);
 
 	v2f movement = c.getMovement();
 	lua_pushnumber(L, movement.X);

@@ -124,9 +124,9 @@ void ClientEnvironment::step(float dtime)
 		// Control local player
 		lplayer->applyControl(dtime_part, this);
 
-		// Apply physics (Minecraft's water has its own, in applyControl)
+		// Apply physics (Minecraft's water and glide have their own, in applyControl)
 		lplayer->gravity = 0;
-		if (!free_move && !lplayer->water_move) {
+		if (!free_move && !lplayer->water_move && !lplayer->gliding) {
 			// Gravity, Minecraft's air
 			if (!is_climbing && !lplayer->in_liquid)
 				lplayer->gravity = lplayer->getAirGravity(dtime_part);
@@ -214,8 +214,12 @@ void ClientEnvironment::step(float dtime)
 			// combine both player fall damage modifiers
 			pre_factor = node_fall_factor * player_fall_factor;
 		}
-		// As in Minecraft: a point for each node of the fall beyond 3, times the modifiers
-		f32 damage_f = (lplayer->getFallHeight(speed_diff.getLength()) - 3.0f) * pre_factor;
+		// As in Minecraft: a point for each node of the fall beyond 3, times the modifiers; since a glide
+		// the fall Minecraft counted
+		f32 fall = lplayer->landing_fall >= 0.0f ? lplayer->landing_fall :
+				lplayer->getFallHeight(speed_diff.getLength());
+		lplayer->landing_fall = -1.0f;
+		f32 damage_f = (fall - 3.0f) * pre_factor;
 
 		if (damage_f > 0.0f && !player_immortal && pre_factor > 0.0f) {
 			// less than a hundredth of a node over is the integration's, not the fall's
@@ -225,6 +229,18 @@ void ClientEnvironment::step(float dtime)
 				m_client->getEventManager()->put(
 					new SimpleTriggerEvent(MtEvent::PLAYER_FALLING_DAMAGE));
 			}
+		}
+	}
+
+	lplayer->landing_fall = -1.0f;
+
+	// A wall hit while gliding, as Minecraft's (fly into wall) hurts
+	if (lplayer->glide_wall_damage > 0.0f) {
+		const u16 damage = std::round(std::min(lplayer->glide_wall_damage, (f32)U16_MAX));
+		lplayer->glide_wall_damage = 0.0f;
+		if (damage != 0 && !player_immortal) {
+			damageLocalPlayer(damage, true);
+			m_client->getEventManager()->put(new SimpleTriggerEvent(MtEvent::PLAYER_FALLING_DAMAGE));
 		}
 	}
 

@@ -1749,6 +1749,11 @@ void GenericCAO::processMessage(const std::string &data)
 		// handheld fork
 		if (canRead(is))
 			phys.swim = readU8(is);
+		if (canRead(is)) {
+			phys.glide = readU8(is);
+			phys.glide_boost = readU16(is);
+			phys.glide_boost_id = readU8(is);
+		}
 
 		if (m_is_local_player) {
 			m_env->getLocalPlayer()->physics_override = phys;

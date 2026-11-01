@@ -1834,6 +1834,8 @@ int ObjectRef::l_get_player_control(lua_State *L)
 	lua_setfield(L, -2, "dig");
 	lua_pushboolean(L, control.place);
 	lua_setfield(L, -2, "place");
+	lua_pushboolean(L, control.glide);
+	lua_setfield(L, -2, "glide");
 
 	v2f movement = control.getMovement();
 	lua_pushnumber(L, movement.X);
@@ -1876,7 +1878,8 @@ int ObjectRef::l_get_player_control_bits(lua_State *L)
 		( (u32)(c.sneak & 1) << 6) |
 		( (u32)(c.dig   & 1) << 7) |
 		( (u32)(c.place & 1) << 8) |
-		( (u32)(c.zoom  & 1) << 9)
+		( (u32)(c.zoom  & 1) << 9) |
+		( (u32)(c.glide & 1) << 10)
 	;
 
 	lua_pushinteger(L, keypress_bits);
@@ -1916,6 +1919,14 @@ int ObjectRef::l_set_physics_override(lua_State *L)
 	getfloatfield(L, 2, "acceleration_fast", phys.acceleration_fast);
 	getfloatfield(L, 2, "speed_walk", phys.speed_walk);
 	getboolfield(L, 2, "swim", phys.swim);
+	getboolfield(L, 2, "glide", phys.glide);
+	// a boost starts with each set, also of the same length
+	lua_getfield(L, 2, "glide_boost");
+	if (lua_isnumber(L, -1)) {
+		phys.glide_boost = rangelim(lua_tonumber(L, -1), 0, U16_MAX);
+		phys.glide_boost_id++;
+	}
+	lua_pop(L, 1);
 
 	if (phys != old)
 		playersao->m_physics_override_sent = false;
@@ -1967,6 +1978,8 @@ int ObjectRef::l_get_physics_override(lua_State *L)
 	lua_setfield(L, -2, "speed_walk");
 	lua_pushboolean(L, phys.swim);
 	lua_setfield(L, -2, "swim");
+	lua_pushboolean(L, phys.glide);
+	lua_setfield(L, -2, "glide");
 	return 1;
 }
 

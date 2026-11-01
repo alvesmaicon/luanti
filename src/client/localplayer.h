@@ -8,6 +8,7 @@
 #include "constants.h"
 #include "lighting.h"
 #include <string>
+#include <vector>
 
 class Client;
 class ClientActiveObject;
@@ -61,6 +62,13 @@ public:
 	// and whether it moves the player (not flying or climbing)
 	f32 water_depth = 0.0f;
 	bool water_move = false;
+	// Minecraft's elytra (physics override glide): gliding, and what a wall hit while gliding
+	// hurts (applied by the environment)
+	bool gliding = false;
+	f32 glide_wall_damage = 0.0f;
+	// Minecraft's fall distance at a landing since a glide, else negative
+	f32 landing_fall = -1.0f;
+	void resetFallDistance() { m_fall_distance = -1.0f; }
 
 	f32 gravity = 0; // total downwards acceleration
 
@@ -178,6 +186,10 @@ private:
 	void updateWater(Map *map, const NodeDefManager *nodemgr, const v3f &position);
 	void applyWaterControl(float dtime, Environment *env);
 	void applyWaterAirControl(float dtime);
+	void startGlide();
+	void stopGlide(bool landed);
+	void applyGlideControl(float dtime);
+	void glideTick();
 	void old_move(f32 dtime, Environment *env,
 			std::vector<CollisionInfo> *collision_info);
 	void handleAutojump(f32 dtime, Environment *env,
@@ -214,6 +226,16 @@ private:
 	bool m_water_air = false;
 	// The water's current, a push per Minecraft tick
 	v3f m_water_current;
+	// Jump as it was on the last control, for a new press
+	bool m_jump_was = false;
+	// Time into the glide's 20 Hz tick, and the rockets' boosts: ticks left of each
+	f32 m_glide_time = 0.0f;
+	u8 m_glide_boost_id = 0;
+	std::vector<u16> m_glide_boosts;
+	// Minecraft's fall distance, counted from a glide until the landing (negative: not counted)
+	f32 m_fall_distance = -1.0f;
+	// Landed from a glide, until Minecraft's ground friction is back to walking speeds
+	bool m_glide_slide = false;
 	bool m_disable_jump = false;
 	bool m_disable_descend = false;
 	u16 m_breath = PLAYER_MAX_BREATH_DEFAULT;

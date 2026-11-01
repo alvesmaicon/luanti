@@ -339,6 +339,9 @@ std::string PlayerSAO::generateUpdatePhysicsOverrideCommand() const
 	writeF32(os, phys.speed_walk);
 	// handheld fork
 	writeU8(os, phys.swim);
+	writeU8(os, phys.glide);
+	writeU16(os, phys.glide_boost);
+	writeU8(os, phys.glide_boost_id);
 	return os.str();
 }
 
@@ -641,8 +644,10 @@ bool PlayerSAO::checkMovementCheat()
 	static thread_local const u32 anticheat_flags =
 		g_settings->getFlagStr("anticheat_flags", flagdesc_anticheat, nullptr);
 
+	// a glide goes faster than any walk or fall it knows
 	if (m_is_singleplayer ||
 			isAttached() ||
+			(m_player->physics_override.glide && m_player->getPlayerControl().glide) ||
 			!(anticheat_flags & AC_MOVEMENT)) {
 		m_last_good_position = getBasePosition();
 		return false;
