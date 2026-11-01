@@ -149,6 +149,102 @@ local function get_disabled_settings(game)
 	return disabled_settings
 end
 
+-- the world picked: the textlist's, or on the handheld's list the last one picked, at first the latest played
+local function selected_world(tabdata)
+	local index = core.get_textlist_index("sp_worlds")
+	if index or not tabdata.handheld_list then
+		return index
+	end
+	index = filterlist.get_current_index(menudata.worldlist,
+			tonumber(core.settings:get("mainmenu_last_selected_world")))
+	if index == 0 and menudata.worldlist:size() > 0 then
+		return 1
+	end
+	return index > 0 and index or nil
+end
+
+local function world_icon(world)
+	local icon = world.path .. DIR_DELIM .. "icon.png"
+	local file = io.open(icon, "rb")
+	if file then
+		file:close()
+		return icon
+	end
+	local game = pkgmgr.find_by_gameid(world.gameid)
+	return game and game.menuicon_path or ""
+end
+
+-- the handheld's list as Minecraft's Select World: a row a world, with the picture the game took of it when it was
+-- last left (icon.png), its name, when it was last played and its seed, and its mode, difficulty and type; the
+-- latest played on top. A row picks its world, a second click on it within half a second plays it
+local ROW_H = 1.8
+
+local function handheld_worldlist(tabview, tabdata, index)
+	local list = menudata.worldlist:get_list()
+	local w, h = tabview.width - 0.75, tabview.height - 2.7
+	local scroll_max = math.max(0, math.ceil((#list * ROW_H - h) * 10))
+	local rw = scroll_max > 0 and w - 0.5 or w
+	-- the picked world in view
+	local scroll = math.max(math.min(tabdata.scroll or 0, math.floor((index - 1) * ROW_H * 10)),
+			math.ceil((index * ROW_H - h) * 10))
+	tabdata.scroll = math.max(0, math.min(scroll, scroll_max))
+	local names = {}
+	for i = 1, #list do
+		names[i] = "sp_world_" .. i
+	end
+	local fs = {
+		("scroll_container[0.375,0.375;%g,%g;sp_scroll;vertical;0.1]"):format(rw, h),
+		("style[%s;border=false]"):format(table.concat(names, ",")),
+	}
+	for i, world in ipairs(list) do
+		local y = (i - 1) * ROW_H
+		local conf = Settings(world.path .. DIR_DELIM .. "world.mt")
+		local seed = Settings(world.path .. DIR_DELIM .. "map_meta.txt"):get("seed")
+		local played = tonumber(conf:get("last_played"))
+		local line = {}
+		if played then
+			line[#line + 1] = os.date("%d/%m/%Y %H:%M", played)
+		end
+		if seed then
+			line[#line + 1] = fgettext_ne("Seed: $1", seed)
+		end
+		if i == index then
+			fs[#fs + 1] = ("box[0,%g;%g,%g;#A0A0A0FF]box[0.06,%g;%g,%g;#000000FF]"):format(y, rw, ROW_H, y + 0.06,
+					rw - 0.12, ROW_H - 0.12)
+		end
+		fs[#fs + 1] = ("image[0.09,%g;1.73,1.73;%s]label[2.05,%g;%s]label[2.05,%g;%s]label[2.05,%g;%s]"):format(y + 0.035,
+				core.formspec_escape(world_icon(world)), y + 0.37, core.formspec_escape(world.name), y + 0.9,
+				core.colorize("#A0A0A0", core.formspec_escape(table.concat(line, "    "))), y + 1.43,
+				core.colorize("#A0A0A0", core.formspec_escape(world_summary(conf))))
+		fs[#fs + 1] = ("button[0,%g;%g,%g;%s;]"):format(y, rw, ROW_H, names[i])
+	end
+	fs[#fs + 1] = "scroll_container_end[]"
+	if scroll_max > 0 then
+		-- the thumb as long as the part in view: the engine measures it against max + 1, not the whole list
+		fs[#fs + 1] = ("scrollbaroptions[max=%d;smallstep=10;largestep=%d;thumbsize=%d;arrows=hide]" ..
+				"scrollbar[%g,0.375;0.4,%g;vertical;sp_scroll;%d]"):format(scroll_max, math.floor(h * 10),
+				math.max(1, math.floor(h * (scroll_max + 1) / (#list * ROW_H))), 0.375 + w - 0.4, h, tabdata.scroll)
+	end
+
+	-- Minecraft's buttons, its Edit a Rename and its Back an Exit: this list is the first page
+	local y = tabview.height - 1.175
+	local half, quarter = (w - 0.25) / 2, (w - 0.75) / 4
+	local world = list[index]
+	if world then
+		fs[#fs + 1] = ("button[0.375,%g;%g,0.8;play;%s]"):format(y - 0.95, half, fgettext("Play Selected World"))
+		fs[#fs + 1] = ("button[0.375,%g;%g,0.8;world_rename;%s]"):format(y, quarter, fgettext("Rename"))
+		fs[#fs + 1] = ("button[%g,%g;%g,0.8;world_delete;%s]"):format(0.625 + quarter, y, quarter, fgettext("Delete"))
+		if Settings(world.path .. DIR_DELIM .. "map_meta.txt"):get("seed") then
+			fs[#fs + 1] = ("button[%g,%g;%g,0.8;world_recreate;%s]"):format(0.875 + 2 * quarter, y, quarter,
+					fgettext("Re-create"))
+		end
+	end
+	fs[#fs + 1] = ("button[%g,%g;%g,0.8;world_create;%s]"):format(0.625 + half, y - 0.95, half,
+			fgettext("Create new world"))
+	fs[#fs + 1] = ("button[%g,%g;%g,0.8;world_exit;%s]"):format(1.125 + 3 * quarter, y, quarter, fgettext("Exit"))
+	return table.concat(fs)
+end
+
 local function get_formspec(tabview, name, tabdata)
 
 	-- Point the player to ContentDB when no games are found
@@ -169,7 +265,7 @@ local function get_formspec(tabview, name, tabdata)
 
 	local retval = ""
 
-	local index = core.get_textlist_index("sp_worlds") or filterlist.get_current_index(menudata.worldlist,
+	local index = selected_world(tabdata) or filterlist.get_current_index(menudata.worldlist,
 				tonumber(core.settings:get("mainmenu_last_selected_world"))) or 0
 
 	local list = menudata.worldlist:get_list()
@@ -209,29 +305,10 @@ local function get_formspec(tabview, name, tabdata)
 		end
 	end
 
-	-- a handheld whose game shows none of these settings gives the world list the whole width, and its buttons one row
-	if core.settings:get_bool("menu_handheld") and creative .. damage .. host == "" then
-		-- the selected world's seed, to make that world again
-		local seed = world and Settings(world.path .. DIR_DELIM .. "map_meta.txt"):get("seed")
-		retval = retval ..
-				"container[0.375,0.375]" ..
-				"label[0,0.2;" .. fgettext("Select World:") .. "]" ..
-				"textlist[0,0.5;" .. tabview.width - 0.75 .. ",4.4;sp_worlds;" ..
-				menu_render_worldlist() ..
-				";" .. index .. "]" ..
-				(seed and "label[0,5.2;" .. fgettext("Seed: $1", seed) .. "]" or "") ..
-				"container_end[]"
-		if world then
-			retval = retval .. "button[0.375,5.925;3.14375,0.8;world_delete;" .. fgettext("Delete") .. "]"
-		end
-		if seed then
-			retval = retval .. "button[3.61875,5.925;3.14375,0.8;world_recreate;" .. fgettext("Re-create") .. "]"
-		end
-		retval = retval .. "button[6.8625,5.925;3.225,0.8;world_create;" .. fgettext("New") .. "]"
-		if world then
-			retval = retval .. "button[10.1875,5.925;4.9375,0.8;play;" .. fgettext("Play Game") .. "]"
-		end
-		return retval
+	-- a handheld whose game shows none of these settings gets Minecraft's list
+	tabdata.handheld_list = core.settings:get_bool("menu_handheld") and creative .. damage .. host == ""
+	if tabdata.handheld_list then
+		return handheld_worldlist(tabview, tabdata, selected_world(tabdata) or 0)
 	end
 
 	retval = retval .. "container[5.25,4.875]"
@@ -346,6 +423,49 @@ local function main_button_handler(this, fields, name, tabdata)
 		end
 	end
 
+	-- the handheld's list: its scroll kept for the next formspec, a row picks its world, again plays it
+	if fields.sp_scroll then
+		tabdata.scroll = core.explode_scrollbar_event(fields.sp_scroll).value
+	end
+	for key in pairs(fields) do
+		local i = tonumber(key:match("^sp_world_(%d+)$"))
+		if i then
+			local now = core.get_us_time()
+			world_doubleclick = i == selected_world(tabdata) and now - (tabdata.picked_at or 0) < 500000
+			tabdata.picked_at = now
+			core.settings:set("mainmenu_last_selected_world", menudata.worldlist:get_raw_index(i))
+			menu_worldmt_legacy(i)
+			if not world_doubleclick then
+				return true
+			end
+		end
+	end
+	if tabdata.handheld_list and (fields.key_up or fields.key_down) then
+		local i = (selected_world(tabdata) or 1) + (fields.key_up and -1 or 1)
+		if i >= 1 and i <= menudata.worldlist:size() then
+			core.settings:set("mainmenu_last_selected_world", menudata.worldlist:get_raw_index(i))
+			menu_worldmt_legacy(i)
+		end
+		return true
+	end
+
+	if fields.world_exit then
+		core.close()
+		return true
+	end
+
+	if fields.world_rename then
+		local selected = selected_world(tabdata)
+		local world = selected and menudata.worldlist:get_list()[selected]
+		if world then
+			local dlg = create_rename_world_dlg(world)
+			dlg:set_parent(this)
+			this:hide()
+			dlg:show()
+		end
+		return true
+	end
+
 	if menu_handle_key_up_down(fields,"sp_worlds","mainmenu_last_selected_world") then
 		return true
 	end
@@ -387,11 +507,14 @@ local function main_button_handler(this, fields, name, tabdata)
 			return true
 		end
 
-		local selected = core.get_textlist_index("sp_worlds")
+		local selected = selected_world(tabdata)
 		gamedata.selected_world = menudata.worldlist:get_raw_index(selected)
 
 		if selected == nil or gamedata.selected_world == 0 then
 			return true
+		end
+		if tabdata.handheld_list then
+			menu_worldmt(selected, "last_played", tostring(os.time()))
 		end
 
 		-- Update last game
@@ -436,7 +559,7 @@ local function main_button_handler(this, fields, name, tabdata)
 		this.dlg_create_world_closed_at = 0
 		local from
 		if fields["world_recreate"] then
-			local selected = core.get_textlist_index("sp_worlds")
+			local selected = selected_world(tabdata)
 			from = selected and menudata.worldlist:get_list()[selected]
 		end
 		local create_world_dlg = create_create_world_dlg(from)
@@ -447,7 +570,7 @@ local function main_button_handler(this, fields, name, tabdata)
 	end
 
 	if fields["world_delete"] ~= nil then
-		local selected = core.get_textlist_index("sp_worlds")
+		local selected = selected_world(tabdata)
 		if selected ~= nil and
 			selected <= menudata.worldlist:size() then
 			local world = menudata.worldlist:get_list()[selected]
@@ -466,7 +589,7 @@ local function main_button_handler(this, fields, name, tabdata)
 	end
 
 	if fields["world_configure"] ~= nil then
-		local selected = core.get_textlist_index("sp_worlds")
+		local selected = selected_world(tabdata)
 		if selected ~= nil then
 			local configdialog =
 				create_configure_world_dlg(

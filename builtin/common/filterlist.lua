@@ -268,3 +268,17 @@ function sort_worlds_alphabetic(self)
 		return a.name:lower() < b.name:lower()
 	end)
 end
+
+-- the latest played first (the handheld writes last_played to world.mt), then by name
+function sort_worlds_last_played(self)
+	local played = {}
+	for _, world in ipairs(self.m_processed_list) do
+		played[world] = tonumber(Settings(world.path .. DIR_DELIM .. "world.mt"):get("last_played")) or 0
+	end
+	table.sort(self.m_processed_list, function(a, b)
+		if played[a] ~= played[b] then
+			return played[a] > played[b]
+		end
+		return a.name:lower() < b.name:lower()
+	end)
+end

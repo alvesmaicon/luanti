@@ -3,7 +3,8 @@
 -- SPDX-License-Identifier: LGPL-2.1-or-later
 
 MAIN_TAB_W = 15.5
-MAIN_TAB_H = 7.1
+-- the handheld's world list, as Minecraft's, takes the height four worlds and two rows of buttons need
+MAIN_TAB_H = core.settings:get_bool("menu_handheld") and 9.9 or 7.1
 TABHEADER_H = 0.85
 GAMEBAR_H = 1.25
 GAMEBAR_OFFSET_DESKTOP = 0.375
@@ -34,6 +35,7 @@ dofile(menupath .. DIR_DELIM .. "dlg_delete_content.lua")
 dofile(menupath .. DIR_DELIM .. "dlg_delete_world.lua")
 dofile(menupath .. DIR_DELIM .. "dlg_register.lua")
 dofile(menupath .. DIR_DELIM .. "dlg_rename_modpack.lua")
+dofile(menupath .. DIR_DELIM .. "dlg_rename_world.lua")
 dofile(menupath .. DIR_DELIM .. "dlg_version_info.lua")
 dofile(menupath .. DIR_DELIM .. "dlg_reinstall_mtg.lua")
 dofile(menupath .. DIR_DELIM .. "dlg_rebind_keys.lua")
@@ -101,7 +103,8 @@ local function init_globals()
 	)
 
 	menudata.worldlist:add_sort_mechanism("alphabetic", sort_worlds_alphabetic)
-	menudata.worldlist:set_sortmode("alphabetic")
+	menudata.worldlist:add_sort_mechanism("last_played", sort_worlds_last_played)
+	menudata.worldlist:set_sortmode(core.settings:get_bool("menu_handheld") and "last_played" or "alphabetic")
 
 	mm_game_theme.init()
 	mm_game_theme.set_engine() -- This is just a fallback.
@@ -109,6 +112,8 @@ local function init_globals()
 	-- Create main tabview
 	local tv_main = tabview_create("maintab", {x = MAIN_TAB_W, y = MAIN_TAB_H}, {x = 0, y = 0})
 
+	-- a handheld with one game shows no game bar (tab_local.lua): the tabs take its room
+	tv_main.no_gamebar = core.settings:get_bool("menu_handheld") and #pkgmgr.games <= 1
 	tv_main:set_autosave_tab(true)
 	tv_main:add(tabs.local_game)
 	-- both need the network

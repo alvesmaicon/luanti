@@ -59,15 +59,23 @@ local function get_formspec(self)
 	local tsize = { width = orig_tsize.width, height = orig_tsize.height }
 	tsize.height = tsize.height
 		+ TABHEADER_H -- tabheader included in formspec size
-		+ (TOUCH_GUI and GAMEBAR_OFFSET_TOUCH or GAMEBAR_OFFSET_DESKTOP)
-		+ GAMEBAR_H -- gamebar included in formspec size
+	if not self.no_gamebar then
+		tsize.height = tsize.height
+			+ (TOUCH_GUI and GAMEBAR_OFFSET_TOUCH or GAMEBAR_OFFSET_DESKTOP)
+			+ GAMEBAR_H -- gamebar included in formspec size
+	end
 
 	if self.parent == nil and not prepend then
 		prepend = string.format("size[%f,%f,%s]", tsize.width, tsize.height,
 				dump(self.fixed_size))
 
-		local anchor_pos = TABHEADER_H + orig_tsize.height / 2
-		prepend = prepend .. ("anchor[0.5,%f]"):format(anchor_pos / tsize.height)
+		if self.no_gamebar then
+			-- low on the screen, the header above it: at 640x480 its bottom as far from the edge as its sides
+			prepend = prepend .. "position[0.5,0.93]anchor[0.5,1]"
+		else
+			local anchor_pos = TABHEADER_H + orig_tsize.height / 2
+			prepend = prepend .. ("anchor[0.5,%f]"):format(anchor_pos / tsize.height)
+		end
 
 		if tab.formspec_version then
 			prepend = ("formspec_version[%d]"):format(tab.formspec_version) .. prepend

@@ -306,6 +306,8 @@ local function handheld_settings(data, settings)
 end
 
 local function handheld_world_mt(data, conf)
+	-- on top of the world list, which shows the latest played first
+	conf:set("last_played", tostring(os.time()))
 	conf:set("world_type", data.world_type)
 	if data.world_type == "single_biome" then
 		conf:set("single_biome", data.biome)
@@ -704,6 +706,9 @@ local function create_world_buttonhandler(this, fields)
 				handheld_world_mt(this.data, conf)
 			end
 			conf:write()
+			if handheld then
+				menudata.worldlist:refresh()
+			end
 		end
 
 		gamedata.errormessage = message
@@ -774,6 +779,20 @@ end
 
 
 -- from_world: Minecraft's Re-create, the new world starts with that world's seed and choices
+-- the world's game mode, difficulty and type, as the handheld's world list shows them
+function world_summary(conf)
+	local parts = {conf:get_bool("creative_mode") and fgettext_ne("Creative") or fgettext_ne("Survival")}
+	if conf:get("difficulty") then
+		local _, difficulty = find(DIFFICULTIES, conf:get("difficulty"))
+		parts[#parts + 1] = difficulty[2]
+	end
+	if (conf:get("world_type") or "default") ~= "default" then
+		local _, wtype = find(WORLD_TYPES, conf:get("world_type"))
+		parts[#parts + 1] = wtype[2]
+	end
+	return table.concat(parts, ", ")
+end
+
 function create_create_world_dlg(from_world)
 	local retval = dialog_create("sp_create_world",
 					create_world_formspec,

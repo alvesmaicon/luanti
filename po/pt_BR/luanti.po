@@ -1095,6 +1095,10 @@ msgstr "Semente: $1"
 msgid "Re-create"
 msgstr "Recriar"
 
+#: builtin/mainmenu/tab_local.lua
+msgid "Play Selected World"
+msgstr "Jogar mundo selecionado"
+
 #: builtin/mainmenu/dlg_create_world.lua
 msgid "Game"
 msgstr "Jogo"
