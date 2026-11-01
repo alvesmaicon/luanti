@@ -1,0 +1,16 @@
+# Luanti as an app for the App Installer (docs/making-apps.md); dev/gl luanti-app fills in the version
+[ENTRY]
+CATEGORY=Games
+NAME=Luanti
+DESCRIPTION=A world of blocks: build, mine, craft and survive
+COMMAND=sh run.sh
+ICON=icon.png
+VERSION=@VERSION@
+
+[ENTRY]
+CATEGORY=Games
+NAME=Minecraft look for Luanti
+DESCRIPTION=Gives Luanti the textures, sounds and music of your own Minecraft, from a copy of .minecraft in HOME
+TERMINAL=1
+COMMAND=sh mc-import.sh
+ICON=icon.png

@@ -1,0 +1,106 @@
+name: goodluckOS app
+
+# Luanti as an app for goodluckOS (goodluckos/README.md#building-the-app): goodluckOS's Buildroot builds this checkout's
+# engine and the game with the console's toolchain and libraries, then goodluckos/build.sh zips the app. A tag like
+# 5.18.0-handheld.33 also publishes the zip as that tag's release.
+on:
+  push:
+    branches:
+      - 'handheld/**'
+    tags:
+      - '*-handheld.*'
+  workflow_dispatch:
+    inputs:
+      goodluckos_ref:
+        description: 'goodluckOS branch, tag or commit to build against'
+        default: develop
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: luanti
+
+      - uses: actions/checkout@v7
+        with:
+          repository: alvesmaicon/goodluckOS
+          ref: ${{ inputs.goodluckos_ref || 'develop' }}
+          path: goodluckos-os
+
+      - name: Restore downloads
+        id: dl
+        uses: actions/cache/restore@v6
+        with:
+          path: dl
+          key: goodluckos-app-dl-${{ hashFiles('luanti/goodluckos/buildroot/**/*.mk', 'goodluckos-os/rootfs/Dockerfile', 'goodluckos-os/rootfs/configs/goodluck_defconfig') }}
+          restore-keys: goodluckos-app-dl-
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: ccache
+          key: goodluckos-app-ccache-${{ github.run_id }}
+          restore-keys: goodluckos-app-ccache-
+
+      # goodluckOS's Buildroot image (rootfs/Dockerfile: Buildroot in /src/buildroot); the toolchain is built the first
+      # time, ccache keeps the next runs short
+      - name: Build the app
+        timeout-minutes: 270
+        shell: bash
+        run: |
+          mkdir -p dl ccache
+          docker build -q -t goodluck-builder goodluckos-os/rootfs
+          docker run --rm --name goodluck-app \
+            -v "$PWD/luanti:/luanti" -v "$PWD/goodluckos-os:/os:ro" -v "$PWD/dl:/src/dl" \
+            -v "$PWD/ccache:/root/.buildroot-ccache" -e CCACHE_MAXSIZE=2G \
+            goodluck-builder bash -c 'apt-get update -qq && apt-get install -y -qq python3 > /dev/null &&
+              /luanti/goodluckos/build.sh /os /src /src/out /src/dl' 2>&1 |
+            tee build.log | grep --line-buffered -E '^(>>>|==)'
+          sudo chown -R "$(id -u):$(id -g)" dl ccache luanti/goodluckos/out
+          ls luanti/goodluckos/out/Luanti-*.zip
+
+      - name: Show the end of the build log
+        if: failure()
+        run: tail -n 150 build.log
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: luanti-app
+          path: luanti/goodluckos/out/Luanti-*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip=luanti/goodluckos/out/Luanti-${GITHUB_REF_NAME}.zip
+          mv luanti/goodluckos/out/Luanti-*.zip "$zip"
+          gh release create "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --title "Luanti $GITHUB_REF_NAME for goodluckOS" \
+            --notes-file luanti/goodluckos/RELEASE.md
+
+      # Only pushes save, so other runs don't evict the branch's cache
+      - name: Save downloads
+        if: always() && github.event_name == 'push' && steps.dl.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: dl
+          key: ${{ steps.dl.outputs.cache-primary-key }}
+
+      - name: Save ccache
+        if: always() && github.event_name == 'push'
+        uses: actions/cache/save@v6
+        with:
+          path: ccache
+          key: goodluckos-app-ccache-${{ github.run_id }}

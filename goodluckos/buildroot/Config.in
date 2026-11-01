@@ -1,0 +1,5 @@
+menu "Luanti app"
+source "$BR2_EXTERNAL_LUANTI_PATH/package/luanti-libzip/Config.in"
+source "$BR2_EXTERNAL_LUANTI_PATH/package/luanti/Config.in"
+source "$BR2_EXTERNAL_LUANTI_PATH/package/luanti-game/Config.in"
+endmenu

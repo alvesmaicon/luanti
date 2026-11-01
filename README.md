@@ -9,9 +9,13 @@
 
 ## This fork: Luanti for handhelds
 
-`handheld/5.18` is Luanti 5.18.0 plus changes for weak hardware (`handheld/5.17` has them on 5.17.0): an old GLES 2.0 GPU, a few hundred MB of RAM, a small screen. It is developed and measured on a GA36-MB handheld (an R36S clone: Allwinner A33, 4x Cortex-A7 at 1.2 GHz, Mali-400 through Mesa's lima driver, 512 MB of RAM, 640x480 screen), where it ships with [goodluckOS](https://github.com/alvesmaicon/goodluckOS).
+`handheld/5.18` is Luanti 5.18.0 plus changes for weak hardware (`handheld/5.17` has them on 5.17.0): an old GLES 2.0 GPU, a few hundred MB of RAM, a small screen. It is developed and measured on a GA36-MB handheld (an R36S clone: Allwinner A33, 4x Cortex-A7 at 1.2 GHz, Mali-400 through Mesa's lima driver, 512 MB of RAM, 640x480 screen), where it runs on [goodluckOS](https://github.com/CodeZombie/goodluckOS) as an app.
 
 This fork is not affiliated with the Luanti project. The changes were written with AI assistance (Claude). Luanti's [AI policy](doc/developing/ai_policy.md) doesn't accept that kind of contribution, so none of it is proposed upstream as a pull request. Small fixes that upstream could take are tracked as [issues labeled "upstream candidate"](https://github.com/alvesmaicon/luanti/issues?q=label%3A%22upstream+candidate%22).
+
+### On goodluckOS
+
+[`goodluckos/`](goodluckos/README.md) makes this branch an app for goodluckOS: the engine, Minetest Game with the mods that bring it close to Minecraft, and the files that run it on the console, in one zip. Copy `Luanti-*.zip` from the [releases](https://github.com/alvesmaicon/luanti/releases) to the `apps` folder of the console's HOME and install it in System Settings -> System -> App Installer (a goodluckOS with the App Installer is needed). How it plays, its controls, the mods and their licenses, and how the zip is built: [goodluckos/README.md](goodluckos/README.md).
 
 ### Results on the handheld
 
@@ -96,7 +100,7 @@ What is left, and what was already found out on the way: [doc/handheld/ROADMAP.m
 
 ### Building
 
-The same as upstream: see [doc/compiling](doc/compiling/). goodluckOS builds it for the handheld with Buildroot, applying this branch's commits as patches.
+The same as upstream: see [doc/compiling](doc/compiling/). For the handheld, `goodluckos/build.sh` builds it with goodluckOS's Buildroot and zips the app ([Building the app](goodluckos/README.md#building-the-app)).
 
 ---
 
