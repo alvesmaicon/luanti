@@ -457,6 +457,10 @@ local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
 		for _, s in ipairs(spawns) do
 			goodluck_villages.spawn(s[1], s[2], s[3], s[4])
 		end
+		-- and its iron golem, on the crossroads, as Minecraft's town centre has one (goodluck_golems)
+		if core.global_exists("goodluck_golems") then
+			goodluck_golems.village({x = vx, y = vy + 1, z = vz})
+		end
 	end)
 	return #placements, #spawns
 end

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # goodluck_models' creatures and things: Minecraft's models for its textures' layouts (the cow, the pig, the sheep
 # with its wool, the chicken, the horse, the donkey the mule shares, the spider, the zombie, the skeleton, the
-# villager, the boat, the arrow, and the Nether's ghast, blaze, magma cube, zombified piglin and wither skeleton, as
-# 26.x has them), one skinned mesh each, every part a joint, animated as Minecraft animates them.
+# villager, the boat, the arrow, the Nether's ghast, blaze, magma cube, zombified piglin and wither skeleton, and the
+# iron and snow golems, as 26.x has them), one skinned mesh each, every part a joint, animated as Minecraft animates
+# them.
 # Written as binary glTF: Minecraft's model space (y down, the head toward -z, the right side toward -x) is turned to
 # glTF's (the head toward -z, which Luanti's loader turns to +z, where a mob looks at yaw 0), 10 units a node. Frames
 # are seconds: stand 0-1, walk from 1, run from 3, die 4-5, eat 6-8 (cow, sheep), rear 6-7.6 (horses), hit or aim
@@ -854,6 +855,57 @@ def bullet_spin(t):
 # its turns repeat every 2 pi seconds (sin 0.1 and 0.15 a tick)
 ANIMALS.update({"shulker": ((64, 64), shulker(), [(0, 1, None)]),
                 "shulker_bullet": ((64, 32), shulker_bullet(), [(0, 2 * PI, bullet_spin)])})
+
+
+# The golems (goodluck_golems), as 26.x has them. The iron golem (128x128) stands 0-1, lumbers 1-3 at a stroll and
+# 3-4.5 after someone, dies 5-6 and throws both arms up as it hits 7-7.5 (its 10 ticks); its cracks are textures
+# over its own. The snow golem (64x64) glides with its arms up and out, so it stands 0-1 and dies 4-5; Minecraft's
+# carved pumpkin on its head is the second primitive, a block of 16 drawn at 10 (its renderer's 0.625) with its
+# faces where a 16 box unwraps them on 64x64, the carved one at the front
+def iron_golem():
+    return [part("head", (0, -7, -2), box(0, 0, -4, -12, -5.5, 8, 10, 8) + box(24, 0, -1, -5, -7.5, 2, 4, 2)),
+            part("body", (0, -7, 0), box(0, 40, -9, -2, -6, 18, 12, 11) + box(0, 70, -4.5, 10, -3, 9, 5, 6, grow=0.5)),
+            part("right_arm", (0, -7, 0), box(60, 21, -13, -2.5, -3, 4, 30, 6)),
+            part("left_arm", (0, -7, 0), box(60, 58, 9, -2.5, -3, 4, 30, 6)),
+            part("right_leg", (-4, 11, 0), box(37, 0, -3.5, -3, -3, 6, 16, 5)),
+            part("left_leg", (5, 11, 0), box(60, 0, -3.5, -3, -3, 6, 16, 5, mirror=True))]
+
+
+def triangle(x, period):
+    # Minecraft's Mth.triangleWave: from 1 down to -1 and back over a period
+    return (abs(x % period - period * 0.5) - period * 0.25) / (period * 0.25)
+
+
+def lumber(amount, period):
+    # IronGolemModel's walk: the legs -1.5 * triangleWave(walk, 13) * speed each way, the arms against them from -0.2
+    def pose(t):
+        w = triangle(13 * t / period, 13)
+        return {"right_leg": (mc_x(-1.5 * w * amount), None), "left_leg": (mc_x(1.5 * w * amount), None),
+                "right_arm": (mc_x((-0.2 + 1.5 * w) * amount), None),
+                "left_arm": (mc_x((-0.2 - 1.5 * w) * amount), None)}
+    return pose
+
+
+def golem_hit(t):
+    # both arms at -2 + 1.5 * triangleWave(ticks left, 10): up over its head and back down
+    w = triangle(10 - t * FPS, 10)
+    return {"right_arm": (mc_x(-2 + 1.5 * w), None), "left_arm": (mc_x(-2 + 1.5 * w), None)}
+
+
+def snow_golem():
+    arm = box(32, 0, -1, 0, -1, 12, 2, 2, grow=-0.5)
+    pumpkin = [([(x * 0.625, y * 0.625 - 5.5, z * 0.625) for x, y, z in corners], uv)
+               for corners, uv in box(0, 0, -8, -8, -8, 16, 16, 16)]
+    return [part("head", (0, 4, 0), box(0, 0, -4, -8, -4, 8, 8, 8, grow=-0.5), gear=pumpkin),
+            part("left_arm", (5, 6, 0), arm, rot=(0, 0, 1.0)),
+            part("right_arm", (-5, 6, 0), arm, rot=(0, PI, -1.0)),
+            part("upper_body", (0, 13, 0), box(0, 16, -5, -10, -5, 10, 10, 10, grow=-0.5)),
+            part("lower_body", (0, 24, 0), box(0, 36, -6, -12, -6, 12, 12, 12, grow=-0.5))]
+
+
+IRON_GOLEM = [(0, 1, None), (1, 2.0, lumber(0.25, 2.0)), (3, 1.5, lumber(0.44, 1.5)), (5, 1, die), (7, 0.5, golem_hit)]
+ANIMALS.update({"iron_golem": ((128, 128), iron_golem(), IRON_GOLEM),
+                "snow_golem": ((64, 64), snow_golem(), [(0, 1, None), (4, 1, die)])})
 
 def normal(a, b, c):
     u = [b[i] - a[i] for i in range(3)]

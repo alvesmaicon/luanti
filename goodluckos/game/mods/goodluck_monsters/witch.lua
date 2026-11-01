@@ -80,6 +80,10 @@ local function throw(self, target)
 		return
 	end
 	local pos, tp = self.object:get_pos(), target:get_pos()
+	-- a mob she had (an iron golem) may be gone since she last looked
+	if not pos or not tp then
+		return
+	end
 	local v = target:get_velocity() or vector.zero()
 	local d = vector.new(tp.x + v.x / 20 - pos.x, eyes(target).y - 1.1 - pos.y, tp.z + v.z / 20 - pos.z)
 	local g = math.sqrt(d.x * d.x + d.z * d.z)
@@ -111,7 +115,8 @@ local function attack(self, dt)
 	local t = self.attack
 	local pos = self.object:get_pos()
 	local tp = t and t:get_pos()
-	if not tp or t:get_hp() <= 0 or vector.distance(pos, tp) > self.view_range * 2 then
+	local ent = tp and t:get_luaentity()
+	if not tp or (ent and (ent.health or 0) or t:get_hp()) <= 0 or vector.distance(pos, tp) > self.view_range * 2 then
 		self:stop_attack()
 		return
 	end

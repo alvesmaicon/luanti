@@ -321,8 +321,9 @@ local function fireball(name, def)
 	})
 end
 
+-- who hit with it: who fired it (or sent it back), so that what it hits goes after them
 local function sender(self)
-	return self._back and self._owner and self._owner:is_valid() and self._owner or self.object
+	return self._owner and self._owner:is_valid() and self._owner or self.object
 end
 
 fireball(N .. "fireball", {size = 1.5, box = 0.5, power = 1,
@@ -346,7 +347,7 @@ fireball(N .. "small_fireball", {size = 0.375, box = 0.15625,
 		if ent and ent._fire_immune then
 			return
 		end
-		obj:punch(self.object, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = 5}},
+		obj:punch(sender(self), 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = 5}},
 			vector.normalize(self.object:get_velocity()))
 		R.ignite(obj, 5)
 	end,
@@ -366,12 +367,20 @@ local function shoot(name, owner, from, to)
 end
 
 -- a target: who they had while still in range and seen in the last 3 s, else the nearest player in range they see
--- (when: more that must hold of a new one); looked for 4 times a second, _seen the time since they last saw it
+-- (when: more that must hold of a new one); looked for 4 times a second, _seen the time since they last saw it. With
+-- foes, a mob that hit it comes first (mobs_redo's on_punch leaves it in self.attack), as Minecraft's blaze does
 local function eyes(obj)
 	local p = obj:get_pos()
 	return p and vector.offset(p, 0, obj:is_player() and obj:get_properties().eye_height or 1, 0)
 end
-local function target(self, dtime, from, range, when)
+local function alive(obj)
+	if not obj:is_valid() then
+		return false
+	end
+	local ent = obj:get_luaentity()
+	return ent and (ent.health or 0) > 0 or not ent and obj:get_hp() > 0
+end
+local function target(self, dtime, from, range, when, foes)
 	self._seen = (self._seen or 0) + dtime
 	self._think = (self._think or 0) - dtime
 	if self._think > 0 then
@@ -379,8 +388,13 @@ local function target(self, dtime, from, range, when)
 		return t and t:is_valid() and t or nil
 	end
 	self._think = 0.25
+	local foe = foes and self.attack
+	self.attack = nil
+	if foe and not foe:is_player() and alive(foe) and vector.distance(from, foe:get_pos()) <= range then
+		self._target, self._seen = foe, 0
+	end
 	local t = self._target
-	if t and t:is_valid() and t:get_hp() > 0 and vector.distance(from, t:get_pos()) <= range then
+	if t and alive(t) and vector.distance(from, t:get_pos()) <= range then
 		if self:line_of_sight(from, eyes(t)) then
 			self._seen = 0
 		end
@@ -480,7 +494,7 @@ local function blaze_step(self, dtime, moveresult)
 		core.sound_play("fire_fire", {object = self.object, gain = 0.3, max_hear_distance = 12}, true)
 	end
 	local mid = vector.offset(pos, 0, 1.6, 0)
-	local t = target(self, dtime, mid, 48)
+	local t = target(self, dtime, mid, 48, nil, true)
 	local v = self.object:get_velocity()
 	local ground = moveresult and moveresult.touching_ground
 	local up = false
@@ -601,8 +615,8 @@ local function hop(self, dtime, moveresult)
 	self:mob_sound({name = "goodluck_nether_magma_cube_jump", gain = 0.6})
 end
 
--- The zombified piglin: 20 of health, a golden sword (8); left alone until one is hit by a player, then it and every
--- one within 35 (10 up or down) go after them for 20 to 39 s
+-- The zombified piglin: 20 of health, a golden sword (8); left alone until one is hit by a player or another mob (an
+-- iron golem), then it and every one within 35 (10 up or down) go after them for 20 to 39 s
 local function anger(self, who)
 	self._angry = core.get_gametime() + math.random(20, 39)
 	self.passive = false
@@ -757,7 +771,8 @@ mobs:register_mob(N .. "zombified_piglin", {
 		{name = sword_gold ~= "blank.png" and "default:sword_gold", chance = 12, min = 1, max = 1}),
 	animation = HUMANOID,
 	do_punch = function(self, hitter)
-		if not hitter or not hitter:is_player() then
+		local by = hitter and hitter:get_luaentity()
+		if not hitter or not (hitter:is_player() or by and by._cmi_is_mob and by.name ~= self.name) then
 			return
 		end
 		local pos = self.object:get_pos()

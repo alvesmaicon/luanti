@@ -57,8 +57,9 @@ local function building(name, def, g)
 end
 
 local function combat(name, def, g)
-	return name:find(":sword_") ~= nil or name == "tnt:tnt" or def.type == "tool" and any_group(g, "armor_head",
-		"armor_torso", "armor_legs", "armor_feet", "armor_shield") and name ~= "goodluck_elytra:elytra"
+	return name:find(":sword_") ~= nil or name == "tnt:tnt" or name == "goodluck_golems:snowball" or
+		def.type == "tool" and any_group(g, "armor_head", "armor_torso", "armor_legs", "armor_feet", "armor_shield") and
+		name ~= "goodluck_elytra:elytra"
 end
 
 local function tools(name, def, g)
@@ -73,7 +74,7 @@ end
 
 local function ingredients(name, def, g)
 	return def.type == "craft" and not (any_group(g, "spawn_egg") or food(name, def, g) or tools(name, def, g) or
-		building(name, def, g)) or matches(name, "^dye:", "^tnt:gunpowder$", "^mobs:egg$")
+		combat(name, def, g) or building(name, def, g)) or matches(name, "^dye:", "^tnt:gunpowder$", "^mobs:egg$")
 end
 
 -- in Minecraft's places, and its order: by material, each family as Minecraft lists it (patterns on the material);

@@ -122,6 +122,9 @@ mobs:register_mob(MOD .. "skeleton", {
 	passive = false,
 	attack_type = "shoot",
 	arrow = MOD .. "arrow",
+	arrow_override = function(arrow, self)
+		arrow._shooter = self.object
+	end,
 	shoot_interval = 2,
 	shoot_offset = 0.5,
 	reach = 2,
@@ -179,8 +182,10 @@ mobs:register_arrow(MOD .. "arrow", {
 	hit_player = function(self, player)
 		player:punch(self.object, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = 3}}, nil)
 	end,
+	-- a mob it hits goes after the skeleton that shot it, as in Minecraft
 	hit_mob = function(self, mob)
-		mob:punch(self.object, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = 3}}, nil)
+		local by = self._shooter and self._shooter:is_valid() and self._shooter or self.object
+		mob:punch(by, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = 3}}, nil)
 	end,
 	hit_node = function() end,
 })

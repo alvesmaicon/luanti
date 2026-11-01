@@ -208,3 +208,13 @@ goodluck_end_item_frame_add	entity/itemframe/add_item1 entity/itemframe/add_item
 goodluck_end_item_frame_remove	entity/itemframe/remove_item1 entity/itemframe/remove_item2 entity/itemframe/remove_item3 entity/itemframe/remove_item4
 goodluck_end_item_frame_rotate	entity/itemframe/rotate_item1 entity/itemframe/rotate_item2 entity/itemframe/rotate_item3 entity/itemframe/rotate_item4
 goodluck_end_item_frame_break	entity/itemframe/break1 entity/itemframe/break2 entity/itemframe/break3
+
+# The golems (goodluck_golems): the iron golem hurt, dying, hitting and mended, the snow golem hurt and dying, a
+# snowball thrown
+goodluck_golems_iron_golem_hurt	mob/irongolem/hit1 mob/irongolem/hit2 mob/irongolem/hit3 mob/irongolem/hit4
+goodluck_golems_iron_golem_death	mob/irongolem/death
+goodluck_golems_iron_golem_attack	mob/irongolem/throw
+goodluck_golems_iron_golem_repair	mob/irongolem/repair
+goodluck_golems_snow_golem_hurt	entity/snowman/hurt1 entity/snowman/hurt2 entity/snowman/hurt3
+goodluck_golems_snow_golem_death	entity/snowman/death1 entity/snowman/death2 entity/snowman/death3
+goodluck_golems_throw	random/bow

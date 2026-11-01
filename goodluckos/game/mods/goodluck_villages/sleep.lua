@@ -221,6 +221,8 @@ local function lie(self, h)
 	self.object:set_animation(anim.lay_start and {x = anim.lay_start, y = anim.lay_end} or LAY, 0, 0, false)
 	self.animation_current = "lay"
 	core.get_meta(h.bed):set_int("goodluck_day", core.get_day_count())
+	-- when, in days: one that slept in the last day can call an iron golem (goodluck_golems)
+	self.goodluck_slept = core.get_day_count() + core.get_timeofday()
 end
 
 local function get_up(self, h)
