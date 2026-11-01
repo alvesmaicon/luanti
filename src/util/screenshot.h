@@ -18,3 +18,12 @@ namespace video {
  */
 bool takeScreenshot(video::IVideoDriver *driver, std::string &filename_out);
 
+/**
+ * Save the middle square of what is drawn on the screen so far, scaled down as Minecraft's world icons, for the
+ * handheld's world list
+ * @param driver Video driver to use for the screenshot
+ * @param path The PNG to write
+ * @return true if the icon was saved
+ */
+bool takeWorldIcon(video::IVideoDriver *driver, const std::string &path);
+

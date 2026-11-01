@@ -19,6 +19,7 @@
 #include "config.h"
 #include "content_cao.h"
 #include "content/subgames.h"
+#include "filesys.h"
 #include "client/event_manager.h"
 #include "fontengine.h"
 #include "itemdef.h"
@@ -517,6 +518,9 @@ void Game::run()
 	porting::setPlayingNowNotification(true);
 #endif
 
+	if (server && g_settings->getBool("menu_handheld"))
+		client->setWorldIconPath(server->getWorldPath() + DIR_DELIM "icon.png");
+
 	auto framemarker = FrameMarker("Game::run()-frame").started();
 
 	while (m_rendering_engine->run()
@@ -610,6 +614,12 @@ void Game::run()
 	}
 
 	framemarker.end();
+
+	// ended by a signal, with no pause menu: one more frame for the world's icon
+	if (*kill && server) {
+		client->requestWorldIcon();
+		updateFrame(&graph, &stats, 0.0f, cam_view);
+	}
 
 #ifdef __ANDROID__
 	porting::setPlayingNowNotification(false);

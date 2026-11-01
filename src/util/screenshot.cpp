@@ -13,6 +13,7 @@
 #include "log.h"
 #include "debug.h"
 #include <IVideoDriver.h>
+#include <irr_ptr.h>
 #include <ctime>
 
 #define SCREENSHOT_MAX_SERIAL_TRIES 1000
@@ -94,3 +95,31 @@ bool takeScreenshot(video::IVideoDriver *driver, std::string &filename_out)
 	return success;
 }
 
+#define WORLD_ICON_SIZE 64
+
+bool takeWorldIcon(video::IVideoDriver *driver, const std::string &path)
+{
+	// the 3D view is on the screen this early only when drawn straight to it (no undersampling, or post-processing)
+	if (driver->getCurrentRenderTargetSize() != driver->getScreenSize())
+		return false;
+
+	irr_ptr<video::IImage> shot(driver->createScreenShot());
+	if (!shot) {
+		errorstream << "Could not take the world's icon" << std::endl;
+		return false;
+	}
+
+	const core::dimension2du size = shot->getDimension();
+	const u32 side = std::min(size.Width, size.Height);
+	irr_ptr<video::IImage> square(driver->createImage(shot->getColorFormat(), {side, side}));
+	shot->copyTo(square.get(), {0, 0}, core::recti(core::vector2di((size.Width - side) / 2,
+			(size.Height - side) / 2), core::dimension2di(side, side)));
+	irr_ptr<video::IImage> icon(driver->createImage(video::ECF_R8G8B8, {WORLD_ICON_SIZE, WORLD_ICON_SIZE}));
+	square->copyToScalingBoxFilter(icon.get());
+
+	if (!driver->writeImageToFile(icon.get(), path.c_str())) {
+		errorstream << "Failed to save the world's icon to \"" << path << "\"" << std::endl;
+		return false;
+	}
+	return true;
+}

@@ -2050,6 +2050,14 @@ void Client::takeScreenshotIfRequested()
 	}
 }
 
+void Client::takeWorldIconIfRequested()
+{
+	if (!m_take_world_icon)
+		return;
+	m_take_world_icon = false;
+	takeWorldIcon(m_rendering_engine->get_video_driver(), m_world_icon_path);
+}
+
 void Client::pushToEventQueue(ClientEvent *event)
 {
 	m_client_event_queue.push(event);

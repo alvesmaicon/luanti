@@ -421,6 +421,13 @@ public:
 	// Must be called right before endScene() to take requested screenshots.
 	void takeScreenshotIfRequested();
 
+	// The handheld's world list shows each world as it was left: the world as the next frame draws it, before the
+	// hand, the HUD and the menus, when the pause menu opens and when a signal ends the game (START+SELECT)
+	void setWorldIconPath(const std::string &path) { m_world_icon_path = path; }
+	void requestWorldIcon() { m_take_world_icon = !m_world_icon_path.empty(); }
+	// Called by the render pipeline once the 3D view is drawn
+	void takeWorldIconIfRequested();
+
 	inline void pushToChatQueue(ChatMessage *cec)
 	{
 		m_chat_queue.push(cec);
@@ -641,6 +648,8 @@ private:
 
 	bool m_shutdown = false;
 	bool m_take_screenshot = false;
+	std::string m_world_icon_path;
+	bool m_take_world_icon = false;
 
 	// CSM restrictions byteflag
 	u64 m_csm_restriction_flags = CSMRestrictionFlags::CSM_RF_NONE;

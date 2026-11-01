@@ -357,6 +357,8 @@ void GameFormSpec::showPlayerInventory(const std::string *fs_override)
 
 void GameFormSpec::showPauseMenu()
 {
+	m_client->requestWorldIcon();
+
 	std::string control_text;
 
 	if (g_touchcontrols) {
