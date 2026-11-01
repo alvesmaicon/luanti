@@ -20,4 +20,5 @@ set(BUILTIN_GAME_SRCS
 	game/register.lua
 	game/static_spawn.lua
 	game/voxelarea.lua
+	game/world_settings.lua
 	PARENT_SCOPE)

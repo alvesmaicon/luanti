@@ -78,6 +78,275 @@ local mgv6_biomes = {
 	},
 }
 
+-- The handheld's dialog, as Minecraft's: a Game, a World and a More tab over Create and Cancel, and the world type's
+-- options on a page of their own. Its choices go to world.mt, and the rules that other mods read as settings go there
+-- as "setting.<name>" too (builtin/game/world_settings.lua)
+local WORLD_TYPES = {
+	{"default", fgettext_ne("Default"), "v7"},
+	{"flat", fgettext_ne("Superflat"), "flat"},
+	{"large_biomes", fgettext_ne("Large biomes"), "v7"},
+	{"amplified", fgettext_ne("Amplified"), "v7"},
+	{"single_biome", fgettext_ne("Single biome"), "v7"},
+	{"valleys", fgettext_ne("Valleys"), "valleys"},
+	{"carpathian", fgettext_ne("Carpathian"), "carpathian"},
+}
+-- Minecraft's Large Biomes are four times as wide; Amplified has its seas as Default, and higher hills and more and
+-- higher mountains over them
+local TYPE_SETTINGS = {
+	large_biomes = {
+		mg_biome_np_heat = "50, 50, (4000, 4000, 4000), 5349, 3, 0.5, 2.0",
+		mg_biome_np_humidity = "50, 50, (4000, 4000, 4000), 842, 3, 0.5, 2.0",
+	},
+	amplified = {
+		mgv7_np_terrain_base = "12, 100, (600, 600, 600), 82341, 5, 0.6, 2.0",
+		mgv7_np_terrain_alt = "8, 40, (600, 600, 600), 5934, 5, 0.6, 2.0",
+		mgv7_np_mount_height = "384, 150, (1000, 1000, 1000), 72449, 3, 0.6, 2.0",
+		mgv7_np_mountain = "-0.5, 1, (250, 350, 250), 5333, 5, 0.63, 2.0",
+	},
+}
+-- Minetest Game's biomes and their heat and humidity, which their shores, oceans and underground share: a Single Biome
+-- world has those everywhere, so that it is always the nearest
+local BIOMES = {
+	{"grassland", fgettext_ne("Grassland"), 50, 35},
+	{"deciduous_forest", fgettext_ne("Deciduous forest"), 60, 68},
+	{"coniferous_forest", fgettext_ne("Coniferous forest"), 45, 70},
+	{"taiga", fgettext_ne("Taiga"), 25, 70},
+	{"snowy_grassland", fgettext_ne("Snowy grassland"), 20, 35},
+	{"tundra", fgettext_ne("Tundra"), 0, 40},
+	{"icesheet", fgettext_ne("Ice sheet"), 0, 73},
+	{"desert", fgettext_ne("Desert"), 92, 16},
+	{"sandstone_desert", fgettext_ne("Sandstone desert"), 60, 0},
+	{"cold_desert", fgettext_ne("Cold desert"), 40, 0},
+	{"savanna", fgettext_ne("Savanna"), 89, 42},
+	{"rainforest", fgettext_ne("Rainforest"), 86, 65},
+}
+-- each level's settings for the mods: Easy halves the monsters' health and damage, Hard adds half
+local DIFFICULTIES = {
+	{"peaceful", fgettext_ne("Peaceful"), {only_peaceful_mobs = "true"}},
+	{"easy", fgettext_ne("Easy"), {mob_difficulty = "0.5"}},
+	{"normal", fgettext_ne("Normal"), {}},
+	{"hard", fgettext_ne("Hard"), {mob_difficulty = "1.5"}},
+}
+-- Minecraft's game rules: the setting a rule sets when it isn't as by default (none: the game's mods read it)
+local RULES = {
+	{"keep_inventory", fgettext_ne("Keep inventory after death"), false, "bones_mode", "keep"},
+	{"daylight_cycle", fgettext_ne("Daylight cycle"), true, "time_speed", "0"},
+	{"mob_spawning", fgettext_ne("Mobs spawn"), true, "mobs_spawn", "false"},
+	{"fire_spread", fgettext_ne("Fire spreads"), true, "enable_fire", "false"},
+	{"mob_griefing", fgettext_ne("Mobs change blocks"), true, "mobs_griefing", "false"},
+	{"natural_regeneration", fgettext_ne("Natural regeneration"), true},
+}
+
+local function find(list, key)
+	for i, entry in ipairs(list) do
+		if entry[1] == key then
+			return i, entry
+		end
+	end
+	return 1, list[1]
+end
+
+local function on_off(value)
+	return value and fgettext("On") or fgettext("Off")
+end
+
+-- a label on the left and its switch on the right, as Minecraft's World tab
+local function switch_row(y, name, label, value, x, w)
+	x, w = x or 3.75, w or 8
+	return ("label[%g,%g;%s]button[%g,%g;1.5,0.8;%s;%s]"):format(x, y + 0.4, label, x + w - 1.5, y, name,
+			on_off(value))
+end
+
+-- the switches in two columns, under the single biome's button
+local function handheld_customize(data)
+	local _, wtype = find(WORLD_TYPES, data.world_type)
+	local mg = wtype[3]
+	local fs = {
+		("label[1,0.5;%s]"):format(fgettext("Customize: $1", wtype[2])),
+	}
+	local y = 1
+	if data.world_type == "single_biome" then
+		local _, biome = find(BIOMES, data.biome)
+		fs[#fs + 1] = ("button[1,%g;6.5,0.8;btn_biome;%s]"):format(y, fgettext("Biome: $1", biome[2]))
+		y = y + 1
+	end
+	local switches = {
+		{"flag_main_caves", fgettext("Caves"), data.flags.main.caves},
+		{"flag_main_decorations", fgettext("Decorations"), data.flags.main.decorations},
+		{"flag_main_dungeons", fgettext("Dungeons"), data.flags.main.dungeons},
+	}
+	for _, tab in ipairs(flag_checkboxes[mg] or {}) do
+		switches[#switches + 1] = {"flag_" .. mg .. "_" .. tab[1]:gsub("_", "-"), tab[2], data.flags[mg][tab[1]]}
+	end
+	local rows = math.ceil(#switches / 2)
+	for i, sw in ipairs(switches) do
+		local col, row = math.floor((i - 1) / rows), (i - 1) % rows
+		fs[#fs + 1] = switch_row(y + row * 0.85, sw[1], sw[2], sw[3], 1 + col * 7.5, 6.5)
+	end
+	fs[#fs + 1] = "button[5,6.1;5.5,0.8;btn_customize_done;" .. fgettext("Done") .. "]"
+	return table.concat(fs)
+end
+
+local function handheld_formspec(data)
+	-- the tabs on the page's top edge, as the main menu's
+	local fs = {"formspec_version[6]size[15.5,7.1]"}
+	if data.page == "customize" then
+		return table.concat(fs) .. handheld_customize(data)
+	end
+	fs[#fs + 1] = ("tabheader[0,0;15.5,0.85;dlg_tab;%s,%s,%s;%d;true;false]"):format(fgettext("Game"),
+			fgettext("World"), fgettext("More"), data.tab)
+	if data.tab == 1 then
+		local _, difficulty = find(DIFFICULTIES, data.difficulty)
+		fs[#fs + 1] = ("field[3.75,0.9;8,0.8;te_world_name;%s;%s]"):format(fgettext("World name"),
+				core.formspec_escape(data.worldname))
+		fs[#fs + 1] = ("button[3.75,2.1;8,0.8;btn_game_mode;%s]"):format(fgettext("Game mode: $1",
+				fgettext_ne(data.creative and "Creative" or "Survival")))
+		fs[#fs + 1] = ("button[3.75,3.1;8,0.8;btn_difficulty;%s]"):format(fgettext("Difficulty: $1", difficulty[2]))
+		fs[#fs + 1] = ("button[3.75,4.1;8,0.8;btn_mode_change;%s]"):format(fgettext("Allow changing the game mode: $1",
+				data.mode_change and fgettext_ne("On") or fgettext_ne("Off")))
+	elseif data.tab == 2 then
+		local _, wtype = find(WORLD_TYPES, data.world_type)
+		fs[#fs + 1] = ("button[3.75,0.5;5,0.8;btn_world_type;%s]"):format(fgettext("World type: $1", wtype[2]))
+		fs[#fs + 1] = "button[8.85,0.5;2.9,0.8;btn_customize;" .. fgettext("Customize") .. "]"
+		fs[#fs + 1] = ("field[3.75,2.1;8,0.8;te_seed;%s;%s]"):format(fgettext("Seed for the world generator"),
+				core.formspec_escape(data.seed))
+		fs[#fs + 1] = "label[3.75,3.15;" .. fgettext("Leave blank for a random seed") .. "]"
+		fs[#fs + 1] = switch_row(3.6, "btn_structures", fgettext("Generate structures"), data.structures)
+		fs[#fs + 1] = switch_row(4.45, "btn_bonus_chest", fgettext("Bonus chest"), data.bonus_chest)
+	else
+		for i, rule in ipairs(RULES) do
+			fs[#fs + 1] = switch_row(0.3 + (i - 1) * 0.85, "btn_rule_" .. rule[1], core.formspec_escape(rule[2]),
+					data.rules[rule[1]])
+		end
+	end
+	fs[#fs + 1] = "button[1.75,6.1;5.75,0.8;world_create_confirm;" .. fgettext("Create new world") .. "]"
+	fs[#fs + 1] = "button[8,6.1;5.75,0.8;world_create_cancel;" .. fgettext("Cancel") .. "]"
+	return table.concat(fs)
+end
+
+-- the next entry of a list, after the last the first
+local function next_of(list, key)
+	local i = find(list, key)
+	return list[i % #list + 1][1]
+end
+
+-- all but Create, which the name and seed of a tab not shown don't reach
+local function handheld_fields(this, fields)
+	local data = this.data
+	data.worldname = fields.te_world_name or data.worldname
+	data.seed = fields.te_seed or data.seed
+	if fields.world_create_cancel then
+		this:delete()
+		return true
+	elseif fields.btn_game_mode then
+		data.creative = not data.creative
+		return true
+	elseif fields.dlg_tab then
+		data.tab = tonumber(fields.dlg_tab) or 1
+		return true
+	elseif fields.btn_difficulty then
+		data.difficulty = next_of(DIFFICULTIES, data.difficulty)
+		return true
+	elseif fields.btn_mode_change then
+		data.mode_change = not data.mode_change
+		return true
+	elseif fields.btn_world_type then
+		data.world_type = next_of(WORLD_TYPES, data.world_type)
+		return true
+	elseif fields.btn_customize then
+		data.page = "customize"
+		return true
+	elseif fields.btn_customize_done then
+		data.page = nil
+		return true
+	elseif fields.btn_biome then
+		data.biome = next_of(BIOMES, data.biome)
+		return true
+	elseif fields.btn_structures then
+		data.structures = not data.structures
+		return true
+	elseif fields.btn_bonus_chest then
+		data.bonus_chest = not data.bonus_chest
+		return true
+	end
+	for _, rule in ipairs(RULES) do
+		if fields["btn_rule_" .. rule[1]] then
+			data.rules[rule[1]] = not data.rules[rule[1]]
+			return true
+		end
+	end
+	for key in pairs(fields) do
+		-- a switch of the Customize page: flag_<group>_<flag with dashes>
+		local group, flag = key:match("^flag_([^_]+)_(.+)$")
+		if group and data.flags[group] then
+			flag = flag:gsub("-", "_")
+			data.flags[group][flag] = not data.flags[group][flag]
+			return true
+		end
+	end
+	return false
+end
+
+-- what the handheld's choices add to the world's creation: the mapgen settings, and world.mt's lines
+local function handheld_settings(data, settings)
+	local _, wtype = find(WORLD_TYPES, data.world_type)
+	settings.mg_name = wtype[3]
+	for key, value in pairs(TYPE_SETTINGS[data.world_type] or {}) do
+		settings[key] = value
+	end
+	if data.world_type == "single_biome" then
+		local _, biome = find(BIOMES, data.biome)
+		settings.mg_biome_np_heat = ("%d, 0, (1000, 1000, 1000), 5349, 1, 0.5, 2.0"):format(biome[3])
+		settings.mg_biome_np_humidity = ("%d, 0, (1000, 1000, 1000), 842, 1, 0.5, 2.0"):format(biome[4])
+		settings.mg_biome_np_heat_blend = "0, 0, (8, 8, 8), 13, 1, 1.0, 2.0"
+		settings.mg_biome_np_humidity_blend = "0, 0, (8, 8, 8), 90003, 1, 1.0, 2.0"
+	end
+	settings.mg_flags = table_to_flags(data.flags.main)
+	settings["mg" .. wtype[3] .. "_spflags"] = table_to_flags(data.flags[wtype[3]])
+end
+
+local function handheld_world_mt(data, conf)
+	conf:set("world_type", data.world_type)
+	if data.world_type == "single_biome" then
+		conf:set("single_biome", data.biome)
+	end
+	conf:set_bool("generate_structures", data.structures)
+	conf:set("difficulty", data.difficulty)
+	local _, difficulty = find(DIFFICULTIES, data.difficulty)
+	for name, value in pairs(difficulty[3]) do
+		conf:set("setting." .. name, value)
+	end
+	for _, rule in ipairs(RULES) do
+		local on = data.rules[rule[1]]
+		conf:set_bool(rule[1], on)
+		if rule[4] and on ~= rule[3] then
+			conf:set("setting." .. rule[4], rule[5])
+		end
+	end
+end
+
+-- meta: the world's map_meta.txt, whose flags the Customize page shows
+local function handheld_from_world(data, conf, meta)
+	for group, ftable in pairs(data.flags) do
+		local key = group == "main" and "mg_flags" or "mg" .. group .. "_spflags"
+		for flag in (meta:get(key) or ""):gmatch("[^,%s]+") do
+			local off = flag:match("^no(.+)$")
+			if off and ftable[off] ~= nil then
+				ftable[off] = false
+			elseif ftable[flag] ~= nil then
+				ftable[flag] = true
+			end
+		end
+	end
+	data.world_type = conf:get("world_type") or data.world_type
+	data.biome = conf:get("single_biome") or data.biome
+	data.structures = conf:get_bool("generate_structures", data.structures)
+	data.difficulty = conf:get("difficulty") or data.difficulty
+	for _, rule in ipairs(RULES) do
+		data.rules[rule[1]] = conf:get_bool(rule[1], rule[3])
+	end
+end
+
 local function create_world_formspec(dialogdata)
 
 	local current_mg = dialogdata.mg
@@ -162,21 +431,8 @@ local function create_world_formspec(dialogdata)
 				fgettext("Bonus chest"), tostring(dialogdata.bonus_chest))
 	end
 
-	-- a handheld types the name and the seed with the gamepad's keyboard (left empty, the next free name and
-	-- a random seed), and keeps the game's mapgen
 	if core.settings:get_bool("menu_handheld") then
-		dialogdata.mg = current_mg
-		local name_w = disallowed_mapgen_settings["seed"] and 6 or 2.95
-		local seed = disallowed_mapgen_settings["seed"] and "" or
-			"field[3.8,0.7;3,0.5;te_seed;" .. fgettext("Seed") .. ";" ..
-				core.formspec_escape(dialogdata.seed) .. "]"
-		return "size[7,4.2,true]" ..
-			"field[0.8,0.7;" .. name_w .. ",0.5;te_world_name;" .. fgettext("World name") .. ";" ..
-				core.formspec_escape(dialogdata.worldname) .. "]" ..
-			seed ..
-			game_mode(0.5, 1.4, 6) ..
-			"button[0.5,3.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
-			"button[3.5,3.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
+		return handheld_formspec(dialogdata)
 	end
 
 	-- The logic of the flag element IDs is as follows:
@@ -354,6 +610,11 @@ end
 
 local function create_world_buttonhandler(this, fields)
 
+	local handheld = core.settings:get_bool("menu_handheld")
+	if handheld and not (fields["world_create_confirm"] or fields["key_enter"]) then
+		return handheld_fields(this, fields)
+	end
+
 	if fields["world_create_open_cdb"] then
 		local dlg = create_contentdb_dlg("game")
 		dlg:set_parent(this.parent)
@@ -372,7 +633,8 @@ local function create_world_buttonhandler(this, fields)
 			this.parent.dlg_create_world_closed_at = core.get_us_time()
 		end
 
-		local worldname = fields["te_world_name"] or ""
+		-- the handheld's tabs may not show the name or the seed
+		local worldname = fields["te_world_name"] or this.data.worldname or ""
 		local game, _ = pkgmgr.find_by_gameid(core.settings:get("menu_last_game"))
 
 		local message
@@ -401,7 +663,7 @@ local function create_world_buttonhandler(this, fields)
 		end
 
 		if message == nil then
-			this.data.seed = fields["te_seed"] or ""
+			this.data.seed = fields["te_seed"] or this.data.seed or ""
 			this.data.mg = fields["dd_mapgen"] or this.data.mg
 
 			-- actual names as used by engine
@@ -417,6 +679,9 @@ local function create_world_buttonhandler(this, fields)
 				mgvalleys_spflags = table_to_flags(this.data.flags.valleys),
 				mgflat_spflags = table_to_flags(this.data.flags.flat),
 			}
+			if handheld then
+				handheld_settings(this.data, settings)
+			end
 			-- the engine writes both to world.mt: Creative without damage, Survival with it
 			core.settings:set_bool("creative_mode", this.data.creative)
 			core.settings:set_bool("enable_damage", not this.data.creative)
@@ -435,6 +700,9 @@ local function create_world_buttonhandler(this, fields)
 			conf:set_bool("allow_mode_change", this.data.mode_change)
 			-- as Minecraft's: a chest of things to start with by the spawn
 			conf:set_bool("bonus_chest", this.data.bonus_chest)
+			if handheld then
+				handheld_world_mt(this.data, conf)
+			end
 			conf:write()
 		end
 
@@ -505,7 +773,7 @@ local function create_world_buttonhandler(this, fields)
 end
 
 
--- from_world: Minecraft's Re-create, the new world starts with that world's seed and game mode
+-- from_world: Minecraft's Re-create, the new world starts with that world's seed and choices
 function create_create_world_dlg(from_world)
 	local retval = dialog_create("sp_create_world",
 					create_world_formspec,
@@ -516,6 +784,13 @@ function create_create_world_dlg(from_world)
 		creative = false,
 		mode_change = false,
 		bonus_chest = false,
+		-- the handheld's tab, its Customize page and its choices
+		tab = 1,
+		world_type = "default",
+		biome = "grassland",
+		difficulty = "normal",
+		structures = true,
+		rules = {},
 		-- settings the world is created with:
 		seed = core.settings:get("fixed_map_seed") or "",
 		flags = {
@@ -530,12 +805,18 @@ function create_create_world_dlg(from_world)
 		}
 	}
 
+	for _, rule in ipairs(RULES) do
+		retval.data.rules[rule[1]] = rule[3]
+	end
+
 	if from_world then
 		local conf = Settings(from_world.path .. DIR_DELIM .. "world.mt")
-		retval.data.seed = Settings(from_world.path .. DIR_DELIM .. "map_meta.txt"):get("seed") or ""
+		local meta = Settings(from_world.path .. DIR_DELIM .. "map_meta.txt")
+		retval.data.seed = meta:get("seed") or ""
 		retval.data.creative = conf:get_bool("creative_mode", false)
 		retval.data.mode_change = conf:get_bool("allow_mode_change", false)
 		retval.data.bonus_chest = conf:get_bool("bonus_chest", false)
+		handheld_from_world(retval.data, conf, meta)
 	end
 
 	return retval

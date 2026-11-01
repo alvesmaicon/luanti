@@ -1095,6 +1095,174 @@ msgstr "Semente: $1"
 msgid "Re-create"
 msgstr "Recriar"
 
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Game"
+msgstr "Jogo"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "World"
+msgstr "Mundo"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "More"
+msgstr "Mais"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Create new world"
+msgstr "Criar novo mundo"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Difficulty: $1"
+msgstr "Dificuldade: $1"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Peaceful"
+msgstr "Pacífico"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Easy"
+msgstr "Fácil"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Normal"
+msgstr "Normal"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Hard"
+msgstr "Difícil"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Allow changing the game mode: $1"
+msgstr "Permitir trocar de modo: $1"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "World type: $1"
+msgstr "Tipo de mundo: $1"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Default"
+msgstr "Padrão"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Superflat"
+msgstr "Superplano"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Large biomes"
+msgstr "Biomas grandes"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Amplified"
+msgstr "Amplificado"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Single biome"
+msgstr "Bioma único"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Valleys"
+msgstr "Vales"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Carpathian"
+msgstr "Cárpatos"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Customize"
+msgstr "Personalizar"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Customize: $1"
+msgstr "Personalizar: $1"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Biome: $1"
+msgstr "Bioma: $1"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Grassland"
+msgstr "Pradaria"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Deciduous forest"
+msgstr "Floresta decídua"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Coniferous forest"
+msgstr "Floresta de coníferas"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Taiga"
+msgstr "Taiga"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Snowy grassland"
+msgstr "Pradaria nevada"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Tundra"
+msgstr "Tundra"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Ice sheet"
+msgstr "Manto de gelo"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Desert"
+msgstr "Deserto"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Sandstone desert"
+msgstr "Deserto de arenito"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Cold desert"
+msgstr "Deserto frio"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Savanna"
+msgstr "Savana"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Rainforest"
+msgstr "Floresta tropical"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Seed for the world generator"
+msgstr "Semente do gerador de mundo"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Leave blank for a random seed"
+msgstr "Deixe em branco para uma semente aleatória"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Generate structures"
+msgstr "Gerar estruturas"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Keep inventory after death"
+msgstr "Manter o inventário ao morrer"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Daylight cycle"
+msgstr "Ciclo do dia"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Mobs spawn"
+msgstr "Criaturas surgem"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Fire spreads"
+msgstr "Fogo se espalha"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Mobs change blocks"
+msgstr "Criaturas mexem em blocos"
+
+#: builtin/mainmenu/dlg_create_world.lua
+msgid "Natural regeneration"
+msgstr "Regeneração natural"
+
 #: src/client/game.cpp
 msgid "Loading terrain..."
 msgstr "Carregando terreno..."
