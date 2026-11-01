@@ -147,13 +147,13 @@ local function find(list, key)
 end
 
 -- a label on the left and a switch on the right, the whole row its button: "On" and "Off" didn't fit in every
--- language
+-- language. On, it takes a focused text field's green and dark edge
 local function switch_row(y, name, label, value, x, w)
 	x, w = x or 3.75, w or 8
 	local sx = x + w - 1.3
 	return ("label[%g,%g;%s]box[%g,%g;1.3,0.62;%s]box[%g,%g;1.2,0.52;%s]box[%g,%g;0.42,0.42;%s]"):format(x, y + 0.4,
-			label, sx, y + 0.09, value and "#6CC46CFF" or "#808080FF", sx + 0.05, y + 0.14,
-			value and "#3A873AFF" or "#1E1E1EFF", value and sx + 0.78 or sx + 0.1, y + 0.19,
+			label, sx, y + 0.09, value and "#1E1E1EFF" or "#808080FF", sx + 0.05, y + 0.14,
+			value and "#608631FF" or "#1E1E1EFF", value and sx + 0.78 or sx + 0.1, y + 0.19,
 			value and "#FFFFFFFF" or "#9A9A9AFF") ..
 			("style[%s;border=false]button[%g,%g;%g,0.8;%s;]"):format(name, x, y, w, name)
 end
