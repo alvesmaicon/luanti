@@ -1,4 +1,4 @@
-# Luanti as an app for the App Installer (docs/making-apps.md); dev/gl luanti-app fills in the version
+# Luanti as an app for goodluckOS's App Installer (its docs/making-apps.md); goodluckos/build.sh fills in the version
 [ENTRY]
 CATEGORY=Games
 NAME=Luanti
