@@ -443,6 +443,11 @@ local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
 				core.set_node(b, {name = "goodluck_anvil:anvil", param2 = pr(0, 3)})
 			end
 		end
+		-- the furnaces set as a placed one is: the schematic leaves them without their inventory, which breaks the
+		-- furnace's timer
+		for _, f in ipairs(core.find_nodes_in_area(p.pos, p2, {"default:furnace", "default:furnace_active"})) do
+			core.set_node(f, {name = "default:furnace", param2 = core.get_node(f).param2})
+		end
 		-- traders by trade; in a house, one villager a bed
 		for _, job in ipairs(residents[p.file] or {}) do
 			spawns[#spawns + 1] = {p.pos, p2, job}
