@@ -913,7 +913,7 @@ ANIMALS.update({"iron_golem": ((128, 128), iron_golem(), IRON_GOLEM),
 # The illagers (goodluck_illagers), 64x64, as 26.x's IllagerModel: a tall head with its nose, the robe over the body,
 # the arms crossed or each on its own, the legs. The pillager holds a crossbow in the right hand (the second texture:
 # standby, a pull or loaded), its arms as AnimationUtils.animateCrossbowHold has them, or animateCrossbowCharge in the
-# 1.25 s a crossbow takes to load: stands 0-1, walks 1-2, runs 3-3.5, dies 4-5, charges 6-7.25
+# 1.25 s a crossbow takes to load: stands 0-1, walks 1-2, runs 3-3.5, dies 4-5, charges 6-7.25, rides 8-8.1
 CROSSBOW = (("t", 2 / 16, 0.1 / 16, -3 / 16), ("r", 0, -90), ("r", 1, 0), ("r", 2, -60), ("s", 0.9))
 
 
@@ -952,9 +952,15 @@ def flag(t):
     return {"flag": (mc_x((-0.0125 + 0.01 * math.cos(2 * PI * t / 5)) * PI), None)}
 
 
+def sit(t):
+    # riding, as HumanoidModel's: the legs ahead at -1.414, out by 0.314
+    return {"right_leg": (mc_rot(-1.4137167, 0.31415927, 0.07853982), None),
+            "left_leg": (mc_rot(-1.4137167, -0.31415927, -0.07853982), None)}
+
+
 PILLAGER = [(0, 1, crossbow_hold), (1, 1.0, both(crossbow_hold, stride(0.7, 0, 1.0))),
             (3, 0.5, both(crossbow_hold, stride(1.4, 0, 0.5))), (4, 1, both(die, crossbow_hold)),
-            (6, 1.25, crossbow_charge)]
+            (6, 1.25, crossbow_charge), (8, 0.1, both(crossbow_hold, sit))]
 ANIMALS.update({"pillager": ((64, 64), illager(False, held((64, 64), 0, CROSSBOW)), PILLAGER),
                 "banner": ((64, 64), banner(), [(0, 5, flag)])})
 
@@ -962,7 +968,8 @@ ANIMALS.update({"pillager": ((64, 64), illager(False, held((64, 64), 0, CROSSBOW
 # The vindicator and the evoker have both pairs of arms, as IllagerModel does, and show one: crossed while calm, apart
 # when the vindicator raises its axe (AnimationUtils.swingWeaponDown) or the evoker casts (SPELLCASTING: the arms out
 # at 3/4 of a half turn, waving by cos(age * 0.6662) * 0.25); the other pair is scaled away. The vindicator: stands
-# 0-1, walks 1-2, runs 3-3.5 with its axe up, dies 4-5, hits 6-6.5; the evoker: the same but casting 6-6.94
+# 0-1, walks 1-2, runs 3-3.5 with its axe up, dies 4-5, hits 6-6.5; the evoker: the same but casting 6-6.94; both
+# ride 8-8.1
 HIDE = (1e-3, 1e-3, 1e-3)
 
 
@@ -1000,9 +1007,10 @@ def spellcast(t):
 
 VINDICATOR = [(0, 1, crossed), (1, 1.0, both(crossed, stride(0.7, 0, 1.0))),
               (3, 0.5, apart(both(swing_down(), stride(1.4, 0, 0.5)))), (4, 1, both(die, crossed)),
-              (6, 0.5, apart(swing_down(0.5)))]
+              (6, 0.5, apart(swing_down(0.5))), (8, 0.1, both(crossed, sit))]
 EVOKER = [(0, 1, crossed), (1, 1.0, both(crossed, stride(0.7, 0, 1.0))),
-          (3, 0.5, both(crossed, stride(1.4, 0, 0.5))), (4, 1, both(die, crossed)), (6, 0.94, apart(spellcast))]
+          (3, 0.5, both(crossed, stride(1.4, 0, 0.5))), (4, 1, both(die, crossed)), (6, 0.94, apart(spellcast)),
+          (8, 0.1, both(crossed, sit))]
 
 
 # The vex as VexModel has it in 26.x, 32x32: a small head and body under the root's 2.5 up, the arms out at a fifth of

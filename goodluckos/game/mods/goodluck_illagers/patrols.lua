@@ -15,11 +15,14 @@ local alive = goodluck_illagers.alive
 local nether, the_end = core.global_exists("goodluck_nether"), core.global_exists("goodluck_end")
 local timer = EVERY + math.random(0, JITTER)
 
--- the captain's way to its point, the others' to their captain; false while it walks a patrol (and so skips
--- mobs_redo's wandering), looking for targets once a second as mobs_redo would. Every 3 s on the move it checks it
--- went a node; if not (a tree, a wall, a drop), the captain takes another point and the others step aside a moment
+-- the captain's way to its point, the others' to their captain, a raider's to its raid's village; false while it
+-- walks there (and so skips mobs_redo's wandering), looking for targets once a second as mobs_redo would, and on a
+-- ravager it only looks. Every 3 s on the move it checks it went a node; if not (a tree, a wall, a drop), the captain
+-- takes another point and the others step aside a moment
 function goodluck_illagers.patrol(self, dtime)
-	if not self._patrol then
+	local rider = self.object:get_attach() ~= nil
+	local center = self._raid and goodluck_illagers.raid_center(self._raid)
+	if not self._patrol and not center and not rider then
 		return
 	end
 	self._look = (self._look or math.random() * LOOK) - dtime
@@ -30,7 +33,19 @@ function goodluck_illagers.patrol(self, dtime)
 			return false
 		end
 	end
+	if rider then
+		-- on a ravager, which does the walking
+		self:set_animation("sit")
+		return false
+	end
 	local pos = self.object:get_pos()
+	if center then
+		-- a raider marches on the village's middle, and roams there
+		if vector.distance(pos, center) < 8 then
+			return
+		end
+		self._patrol_to = center
+	end
 	if (self._aside or 0) > 0 then
 		self._aside = self._aside - dtime
 		self:set_velocity(self.walk_velocity)
@@ -38,7 +53,9 @@ function goodluck_illagers.patrol(self, dtime)
 		return false
 	end
 	local goal, speed = nil, self.walk_velocity
-	if self._captain then
+	if center then
+		goal = center
+	elseif self._captain then
 		goal = self._patrol_to
 		if not goal or self.at_cliff or math.hypot(goal.x - pos.x, goal.z - pos.z) < NEAR then
 			goal = vector.offset(vector.round(pos), math.random(-FAR, FAR), 0, math.random(-FAR, FAR))
@@ -76,7 +93,7 @@ function goodluck_illagers.patrol(self, dtime)
 		self._stuck = STUCK
 		if self._was and vector.distance(self._was, pos) < 1 then
 			self._was = nil
-			if self._captain then
+			if self._captain and not center then
 				self._patrol_to = nil
 			else
 				self._aside = 1.5
@@ -88,7 +105,7 @@ function goodluck_illagers.patrol(self, dtime)
 	end
 	if self.at_cliff then
 		-- at a drop it turns at once, the captain to its new point and the others aside, and goes on when clear
-		self:yaw_to_pos(goal, self._captain and 0 or (math.random(2) == 1 and 1.5 or -1.5))
+		self:yaw_to_pos(goal, self._captain and not center and 0 or (math.random(2) == 1 and 1.5 or -1.5))
 		self:set_velocity(0)
 		self:set_animation("stand")
 		return false

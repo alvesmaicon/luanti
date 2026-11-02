@@ -67,8 +67,16 @@ mobs:register_mob(VINDICATOR, {
 		run_start = 3, run_end = 3.5,
 		punch_start = 6, punch_end = 6.5,
 		die_start = 4, die_end = 5, die_loop = false,
+		sit_start = 8, sit_end = 8.1,
 	},
-	do_custom = johnny,
+	after_activate = goodluck_illagers.wear_banner,
+	do_custom = function(self, dtime)
+		johnny(self, dtime)
+		if self.state ~= "attack" then
+			return goodluck_illagers.patrol(self, dtime)
+		end
+	end,
+	on_die = goodluck_illagers.drop_banner,
 })
 
 mobs:register_egg(VINDICATOR, S("Vindicator"), "goodluck_illagers_vindicator_egg.png", 0)

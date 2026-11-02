@@ -79,7 +79,12 @@ mobs:register_mob(RAVAGER, {
 		punch_start = 7, punch_end = 7.5,
 		die_start = 5, die_end = 6, die_loop = false,
 	},
-	do_custom = trample,
+	do_custom = function(self, dtime)
+		trample(self, dtime)
+		if self.state ~= "attack" then
+			return goodluck_illagers.patrol(self, dtime)
+		end
+	end,
 })
 
 mobs:register_egg(RAVAGER, S("Ravager"), "goodluck_illagers_ravager_egg.png", 0)

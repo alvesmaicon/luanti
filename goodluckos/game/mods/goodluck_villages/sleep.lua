@@ -2,7 +2,7 @@
 -- door, through it, then to the bed), lies down, and in the morning gets up and walks out again, opening the door and
 -- closing it behind. By day one that wanders far turns back toward home. A villager without a bed (from an older
 -- village, or whose bed is gone) takes the nearest free one; one that can't find its way for a while (walled in) goes
--- straight there.
+-- straight there. A raid on the village (goodluck_illagers) sends them home too, as Minecraft's villagers hide.
 local DUSK, DAWN = 0.76, 0.24
 local REACH = 24
 local STUCK, GIVE_UP = 3, 20
@@ -17,9 +17,10 @@ local function bottom(self)
 end
 local SIDES = {vector.new(1, 0, 0), vector.new(-1, 0, 0), vector.new(0, 0, 1), vector.new(0, 0, -1)}
 
-local function night()
+-- night, or a raid on the village (goodluck_illagers), when they keep indoors
+local function night(self)
 	local t = core.get_timeofday()
-	return t >= DUSK or t < DAWN
+	return t >= DUSK or t < DAWN or goodluck_villages.raided ~= nil and goodluck_villages.raided(self.object:get_pos())
 end
 
 local function solid(pos)
@@ -246,7 +247,7 @@ end
 
 local function think(self)
 	local h = home(self)
-	if night() then
+	if night(self) then
 		if not h then
 			if not self.goodluck_bed and (self._goodluck_rest or 0) <= 0 then
 				self._goodluck_rest = 60
@@ -276,7 +277,7 @@ end
 
 local function sleep_step(self, dtime)
 	if self.goodluck_sleeping then
-		if night() then
+		if night(self) then
 			self.state = "stand"
 			self.object:set_velocity(vector.zero())
 			return false
@@ -319,7 +320,7 @@ if npc then
 		self._goodluck_legs, self._goodluck_way = nil, nil
 		if self.goodluck_sleeping and self.object:get_pos() then
 			local h = home(self)
-			if h and night() then
+			if h and night(self) then
 				lie(self, h)
 			else
 				get_up(self, h)

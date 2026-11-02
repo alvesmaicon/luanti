@@ -858,6 +858,7 @@ goodluck_illagers_banner_circle.png	{entity/banner/circle}
 goodluck_illagers_ominous_bottle.png	{item/ominous_bottle}
 goodluck_illagers_bad_omen.png	{mob_effect/bad_omen}
 goodluck_illagers_raid_omen.png	{mob_effect/raid_omen}
+goodluck_illagers_hero_of_the_village.png	{mob_effect/hero_of_the_village}
 goodluck_illagers_pillager_egg.png	{item/pillager_spawn_egg}
 goodluck_illagers_vindicator.png	{entity/illager/vindicator}
 goodluck_illagers_evoker.png	{entity/illager/evoker}

@@ -171,7 +171,7 @@ core.register_entity(BANNER, {
 })
 
 function goodluck_illagers.wear_banner(self)
-	if self._captain and not (self._banner and self._banner:is_valid()) then
+	if (self._captain or self._raid_leader) and not (self._banner and self._banner:is_valid()) then
 		local obj = core.add_entity(self.object:get_pos(), BANNER)
 		if obj then
 			obj:set_attach(self.object, "head", {x = 0, y = 7, z = 3}, {x = 0, y = 180, z = 0})
@@ -214,6 +214,7 @@ mobs:register_mob(PILLAGER, {
 		run_start = 3, run_end = 3.5,
 		die_start = 4, die_end = 5, die_loop = false,
 		charge_start = 6, charge_end = 7.25, charge_loop = false,
+		sit_start = 8, sit_end = 8.1,
 	},
 	after_activate = function(self)
 		self._load = nil
@@ -225,12 +226,19 @@ mobs:register_mob(PILLAGER, {
 	on_die = function(self, pos)
 		if self._captain then
 			core.add_item(pos, goodluck_illagers.bottle())
-			core.add_item(pos, N .. "ominous_banner")
 		end
+		goodluck_illagers.drop_banner(self, pos)
 	end,
 })
 
 mobs:register_egg(PILLAGER, S("Pillager"), "goodluck_illagers_pillager_egg.png", 0)
+
+-- a captain's or a raid leader's banner, dropped where it falls
+function goodluck_illagers.drop_banner(self, pos)
+	if self._captain or self._raid_leader then
+		core.add_item(pos, N .. "ominous_banner")
+	end
+end
 
 -- a pillager where it can stand at pos; data: fields it starts with (_captain, _patrol...)
 function goodluck_illagers.spawn(name, pos, data)

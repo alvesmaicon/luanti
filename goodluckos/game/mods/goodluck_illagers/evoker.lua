@@ -267,6 +267,7 @@ local function evoker_step(self, dtime)
 	if p then
 		return false
 	end
+	return goodluck_illagers.patrol(self, dtime)
 end
 
 mobs:register_mob(EVOKER, {
@@ -302,11 +303,14 @@ mobs:register_mob(EVOKER, {
 		run_start = 3, run_end = 3.5,
 		die_start = 4, die_end = 5, die_loop = false,
 		cast_start = 6, cast_end = 6.94,
+		sit_start = 8, sit_end = 8.1,
 	},
 	after_activate = function(self)
 		self._cast = nil
+		goodluck_illagers.wear_banner(self)
 	end,
 	do_custom = evoker_step,
+	on_die = goodluck_illagers.drop_banner,
 })
 
 mobs:register_egg(EVOKER, S("Evoker"), "goodluck_illagers_evoker_egg.png", 0)

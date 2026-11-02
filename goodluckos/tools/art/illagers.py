@@ -21,6 +21,7 @@ FILES = {
     "item/crossbow_arrow": "crossbow_arrow",
     "item/ominous_bottle": "ominous_bottle",
     "mob_effect/bad_omen": "bad_omen", "mob_effect/raid_omen": "raid_omen",
+    "mob_effect/hero_of_the_village": "hero_of_the_village",
     "item/pillager_spawn_egg": "pillager_egg", "item/vindicator_spawn_egg": "vindicator_egg",
     "item/evoker_spawn_egg": "evoker_egg", "item/vex_spawn_egg": "vex_egg", "item/ravager_spawn_egg": "ravager_egg",
 }
