@@ -285,14 +285,17 @@ goodluck_golems
   of Minecraft's. Its code is goodluckOS's own (see goodluck_* below).
 
 goodluck_illagers
-  Its textures (the pillager, the crossbow and its three pulls and loaded, the
-  banner and the seven patterns of the ominous banner, the ominous bottle, the
-  Bad Omen and Raid Omen icons, the pillager's spawn egg) are Pixel Perfection
-  Legacy's by Nova Wostra (as goodluck_golems' above), copied by
-  goodluckos/tools/art/illagers.py, and so under CC BY-SA 4.0. The crossbow's
-  sounds are goodluckOS's own bow sounds (x_bows' replacements, below). The
-  pillager and the banner are goodluck_models' meshes of Minecraft's. Its code
-  is goodluckOS's own (see goodluck_* below).
+  Its textures (the pillager, the vindicator, the evoker and its fangs, the
+  vex and its charging skin, the ravager, the crossbow and its three pulls and
+  loaded, the banner and the seven patterns of the ominous banner, the ominous
+  bottle, the totem of undying (the first of its frames), the Bad Omen and Raid
+  Omen icons, the spawn eggs) are Pixel Perfection Legacy's by Nova Wostra (as
+  goodluck_golems' above), copied by goodluckos/tools/art/illagers.py, and so
+  under CC BY-SA 4.0. The vindicator's axe and the vex's sword are Minetest
+  Game's steel axe and sword. The crossbow's sounds are goodluckOS's own bow
+  sounds (x_bows' replacements, below). The illagers, the vex, the ravager, the
+  fangs and the banner are goodluck_models' meshes of Minecraft's. Its code is
+  goodluckOS's own (see goodluck_* below).
 
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game

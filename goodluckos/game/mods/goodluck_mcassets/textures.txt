@@ -839,7 +839,8 @@ goodluck_golems_iron_golem_egg.png	{item/iron_golem_spawn_egg}
 goodluck_golems_snow_golem_egg.png	{item/snow_golem_spawn_egg}
 
 # The illagers (goodluck_illagers): the pillager, the crossbow and its pulls, the banner and the ominous banner's
-# patterns, the ominous bottle, the omen icons, the egg
+# patterns, the ominous bottle, the omen icons, the vindicator, the evoker and its fangs, the vex, the ravager, the
+# totem, the eggs
 goodluck_illagers_pillager.png	{entity/illager/pillager}
 goodluck_illagers_crossbow.png	{item/crossbow_standby}
 goodluck_illagers_crossbow_pulling_0.png	{item/crossbow_pulling_0}
@@ -858,3 +859,14 @@ goodluck_illagers_ominous_bottle.png	{item/ominous_bottle}
 goodluck_illagers_bad_omen.png	{mob_effect/bad_omen}
 goodluck_illagers_raid_omen.png	{mob_effect/raid_omen}
 goodluck_illagers_pillager_egg.png	{item/pillager_spawn_egg}
+goodluck_illagers_vindicator.png	{entity/illager/vindicator}
+goodluck_illagers_evoker.png	{entity/illager/evoker}
+goodluck_illagers_evoker_fangs.png	{entity/illager/evoker_fangs}
+goodluck_illagers_vex.png	{entity/illager/vex}
+goodluck_illagers_vex_charging.png	{entity/illager/vex_charging}
+goodluck_illagers_ravager.png	{entity/illager/ravager}
+goodluck_illagers_totem_of_undying.png	{item/totem_of_undying}
+goodluck_illagers_vindicator_egg.png	{item/vindicator_spawn_egg}
+goodluck_illagers_evoker_egg.png	{item/evoker_spawn_egg}
+goodluck_illagers_vex_egg.png	{item/vex_spawn_egg}
+goodluck_illagers_ravager_egg.png	{item/ravager_spawn_egg}

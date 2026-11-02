@@ -219,8 +219,9 @@ goodluck_golems_snow_golem_hurt	entity/snowman/hurt1 entity/snowman/hurt2 entity
 goodluck_golems_snow_golem_death	entity/snowman/death1 entity/snowman/death2 entity/snowman/death3
 goodluck_golems_throw	random/bow
 
-# The illagers (goodluck_illagers): the pillager now and then, hurt and dying; the crossbow loading, loaded and
-# shooting; Bad Omen coming
+# The illagers (goodluck_illagers): the pillager, the vindicator, the evoker, the vex and the ravager now and then, hurt
+# and dying; the crossbow loading, loaded and shooting; Bad Omen coming; the evoker's spells and fangs, the vex's
+# charge, the ravager's bite, the totem
 goodluck_illagers_pillager	mob/pillager/idle1 mob/pillager/idle2 mob/pillager/idle3 mob/pillager/idle4
 goodluck_illagers_pillager_hurt	mob/pillager/hurt1 mob/pillager/hurt2 mob/pillager/hurt3
 goodluck_illagers_pillager_death	mob/pillager/death1 mob/pillager/death2
@@ -228,3 +229,23 @@ goodluck_illagers_crossbow_loading_start	item/crossbow/loading_start
 goodluck_illagers_crossbow_loading_end	item/crossbow/loading_end
 goodluck_illagers_crossbow_shoot	item/crossbow/shoot1 item/crossbow/shoot2 item/crossbow/shoot3
 goodluck_illagers_bad_omen	event/mob_effects/bad_omen
+goodluck_illagers_vindicator	mob/vindication_illager/idle1 mob/vindication_illager/idle2 mob/vindication_illager/idle3 mob/vindication_illager/idle4 mob/vindication_illager/idle5
+goodluck_illagers_vindicator_hurt	mob/vindication_illager/hurt1 mob/vindication_illager/hurt2 mob/vindication_illager/hurt3
+goodluck_illagers_vindicator_death	mob/vindication_illager/death1 mob/vindication_illager/death2
+goodluck_illagers_evoker	mob/evocation_illager/idle1 mob/evocation_illager/idle2 mob/evocation_illager/idle3 mob/evocation_illager/idle4
+goodluck_illagers_evoker_hurt	mob/evocation_illager/hurt1 mob/evocation_illager/hurt2
+goodluck_illagers_evoker_death	mob/evocation_illager/death1 mob/evocation_illager/death2
+goodluck_illagers_evoker_cast	mob/evocation_illager/cast1 mob/evocation_illager/cast2
+goodluck_illagers_evoker_prepare_attack	mob/evocation_illager/prepare_attack1 mob/evocation_illager/prepare_attack2
+goodluck_illagers_evoker_prepare_summon	mob/evocation_illager/prepare_summon
+goodluck_illagers_evoker_prepare_wololo	mob/evocation_illager/prepare_wololo
+goodluck_illagers_evoker_fangs	mob/evocation_illager/fangs
+goodluck_illagers_vex	mob/vex/idle1 mob/vex/idle2 mob/vex/idle3 mob/vex/idle4
+goodluck_illagers_vex_hurt	mob/vex/hurt1 mob/vex/hurt2
+goodluck_illagers_vex_death	mob/vex/death1 mob/vex/death2
+goodluck_illagers_vex_charge	mob/vex/charge1 mob/vex/charge2 mob/vex/charge3
+goodluck_illagers_ravager	mob/ravager/idle1 mob/ravager/idle2 mob/ravager/idle3 mob/ravager/idle4 mob/ravager/idle5 mob/ravager/idle6 mob/ravager/idle7 mob/ravager/idle8
+goodluck_illagers_ravager_hurt	mob/ravager/hurt1 mob/ravager/hurt2 mob/ravager/hurt3 mob/ravager/hurt4
+goodluck_illagers_ravager_death	mob/ravager/death1 mob/ravager/death2 mob/ravager/death3
+goodluck_illagers_ravager_bite	mob/ravager/bite1 mob/ravager/bite2 mob/ravager/bite3
+goodluck_illagers_totem	item/totem/use_totem

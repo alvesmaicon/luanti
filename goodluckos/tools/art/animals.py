@@ -2,15 +2,17 @@
 # goodluck_models' creatures and things: Minecraft's models for its textures' layouts (the cow, the pig, the sheep
 # with its wool, the chicken, the horse, the donkey the mule shares, the spider, the zombie, the skeleton, the
 # villager, the boat, the arrow, the Nether's ghast, blaze, magma cube, zombified piglin and wither skeleton, the
-# iron and snow golems, the pillager and the banner a captain wears, as 26.x has them), one skinned mesh each, every
-# part a joint, animated as Minecraft animates them.
+# iron and snow golems, the illagers (the pillager and the banner a captain wears, the vindicator, the evoker and its
+# fangs, the vex, the ravager), as 26.x has them), one skinned mesh each, every part a joint, animated as Minecraft
+# animates them.
 # Written as binary glTF: Minecraft's model space (y down, the head toward -z, the right side toward -x) is turned to
 # glTF's (the head toward -z, which Luanti's loader turns to +z, where a mob looks at yaw 0), 10 units a node. Frames
 # are seconds: stand 0-1, walk from 1, run from 3, die 4-5, eat 6-8 (cow, sheep), rear 6-7.6 (horses), hit or aim
-# 6-6.5 (zombie, skeleton, zombified piglin, wither skeleton), charge 6-7.25 (pillager), lay 8-8.1 (villager), flap
-# from 9 (chicken), hop 1-2 (magma cube); the blaze stands 0-10 and dies 11-12. The horses' saddle, bridle and chests,
-# the skeletons' and the piglin's bow or sword and the pillager's crossbow are a second primitive, so that a texture
-# of their own draws them, and nothing where it is blank
+# 6-6.5 (zombie, skeleton, zombified piglin, wither skeleton, vindicator), charge 6-7.25 (pillager), cast 6-6.94
+# (evoker), lay 8-8.1 (villager), flap from 9 (chicken), hop 1-2 (magma cube); the blaze stands 0-10 and dies 11-12,
+# the ravager dies 5-6 and bites 7-7.5, the vex flies 0-0.39 and charges 1-1.39. The horses' saddle, bridle and
+# chests, the skeletons' and the piglin's bow or sword, the pillager's crossbow, the vindicator's axe and the vex's
+# sword are a second primitive, so that a texture of their own draws them, and nothing where it is blank
 #   python3 goodluckos/tools/art/animals.py [out dir]
 import json, math, os, struct, sys
 from mcmodel import box, posed
@@ -955,6 +957,133 @@ PILLAGER = [(0, 1, crossbow_hold), (1, 1.0, both(crossbow_hold, stride(0.7, 0, 1
             (6, 1.25, crossbow_charge)]
 ANIMALS.update({"pillager": ((64, 64), illager(False, held((64, 64), 0, CROSSBOW)), PILLAGER),
                 "banner": ((64, 64), banner(), [(0, 5, flag)])})
+
+
+# The vindicator and the evoker have both pairs of arms, as IllagerModel does, and show one: crossed while calm, apart
+# when the vindicator raises its axe (AnimationUtils.swingWeaponDown) or the evoker casts (SPELLCASTING: the arms out
+# at 3/4 of a half turn, waving by cos(age * 0.6662) * 0.25); the other pair is scaled away. The vindicator: stands
+# 0-1, walks 1-2, runs 3-3.5 with its axe up, dies 4-5, hits 6-6.5; the evoker: the same but casting 6-6.94
+HIDE = (1e-3, 1e-3, 1e-3)
+
+
+def both_arms(item=()):
+    return illager(True) + [part("right_arm", (-5, 2, 0), box(40, 46, -3, -2, -2, 4, 12, 4), gear=item),
+                            part("left_arm", (5, 2, 0), box(40, 46, -1, -2, -2, 4, 12, 4, mirror=True))]
+
+
+def crossed(t):
+    return {"right_arm": (None, None, HIDE), "left_arm": (None, None, HIDE)}
+
+
+def apart(pose):
+    return lambda t: {**pose(t), "arms": (None, None, HIDE)}
+
+
+def swing_down(hit=None):
+    # the weapon up at -1.885 (and the left arm down), and the blow: sin(a * pi) * 2.2 less sin((1 - (1 - a)^2) * pi)
+    # * 0.4 on the right, 1.2 on the left
+    def pose(t):
+        f = g = 0.0
+        if hit:
+            a = min(1.0, t / hit)
+            f, g = math.sin(a * PI), math.sin((1 - (1 - a) ** 2) * PI)
+        bob = math.cos(2 * PI * t) * 0.15
+        return {"right_arm": (mc_rot(-1.8849558 + bob + f * 2.2 - g * 0.4, 0.15707964, 0), None),
+                "left_arm": (mc_rot(f * 1.2 - g * 0.4, -0.15707964, 0), None)}
+    return pose
+
+
+def spellcast(t):
+    wave = math.cos(2 * PI * t / 0.47) * 0.25
+    return {"right_arm": (mc_rot(wave, 0, 2.3561945), None), "left_arm": (mc_rot(wave, 0, -2.3561945), None)}
+
+
+VINDICATOR = [(0, 1, crossed), (1, 1.0, both(crossed, stride(0.7, 0, 1.0))),
+              (3, 0.5, apart(both(swing_down(), stride(1.4, 0, 0.5)))), (4, 1, both(die, crossed)),
+              (6, 0.5, apart(swing_down(0.5)))]
+EVOKER = [(0, 1, crossed), (1, 1.0, both(crossed, stride(0.7, 0, 1.0))),
+          (3, 0.5, both(crossed, stride(1.4, 0, 0.5))), (4, 1, both(die, crossed)), (6, 0.94, apart(spellcast))]
+
+
+# The vex as VexModel has it in 26.x, 32x32: a small head and body under the root's 2.5 up, the arms out at a fifth of
+# a half turn, two wings flapping by cos(age * 45.84 degrees) * 16.2 degrees about 1.1, an iron sword in the right
+# hand; the body leans 0.157 forward unless it charges, when the sword arm goes up and ahead. Flies 0-0.39, charges
+# 1-1.39, dies 4-5
+def vex():
+    return [part("head", (0, 17.5, 0), box(0, 0, -2.5, -5, -2.5, 5, 5, 5)),
+            part("body", (0, 17.5, 0), box(0, 10, -1.5, 0, -1, 3, 4, 2) + box(0, 16, -1.5, 1, -1, 3, 5, 2, grow=-0.2)),
+            part("right_arm", (-1.75, 17.75, 0), box(23, 0, -1.25, -0.5, -1, 2, 4, 2, grow=-0.1),
+                 gear=held((32, 32)), parent="body"),
+            part("left_arm", (1.75, 17.75, 0), box(23, 6, -0.75, -0.5, -1, 2, 4, 2, grow=-0.1), parent="body"),
+            part("left_wing", (0.5, 18.5, 1), box(16, 14, 0, 0, 0, 0, 5, 8, mirror=True), parent="body"),
+            part("right_wing", (-0.5, 18.5, 1), box(16, 14, 0, 0, 0, 0, 5, 8), parent="body")]
+
+
+def vex_fly(charging):
+    def pose(t):
+        f = math.cos(2 * PI * t / 3.27) * 0.1
+        wing = 1.0995574 + math.cos(2 * PI * t / 0.39) * math.radians(16.2)
+        arm = (-2.0, 0, PI / 5 + f) if charging else (0, 0, PI / 5 + f)
+        return {"body": (mc_x(0 if charging else 0.15707964), None), "right_arm": (mc_rot(*arm), None),
+                "left_arm": (mc_rot(0, 0, -(PI / 5 + f)), None),
+                "left_wing": (mc_rot(0.47123888, wing, -0.47123888), None),
+                "right_wing": (mc_rot(0.47123888, -wing, 0.47123888), None)}
+    return pose
+
+
+# The ravager as RavagerModel has it, 128x128: the neck and the head on it with its horns and its mouth, the body laid
+# along, four long legs swinging by cos(swing * 0.6662) * 0.4; its bite thrusts the neck 6 forward and opens the mouth.
+# Stands 0-1, walks 1-3, runs 3-4, dies 5-6, bites 7-7.5
+def ravager():
+    head = (0, 9, -11.5)
+    return [part("neck", (0, -7, 5.5), box(68, 73, -5, -1, -18, 10, 10, 18)),
+            part("head", head, box(0, 0, -8, -20, -14, 16, 20, 16) + box(0, 0, -2, -6, -18, 4, 8, 4), parent="neck"),
+            part("right_horn", (-10, -5, -19.5), box(74, 55, 0, -14, -2, 2, 14, 4), rot=(1.0995574, 0, 0),
+                 parent="head"),
+            part("left_horn", (8, -5, -19.5), box(74, 55, 0, -14, -2, 2, 14, 4, mirror=True), rot=(1.0995574, 0, 0),
+                 parent="head"),
+            part("mouth", (0, 7, -9.5), box(0, 36, -8, 0, -16, 16, 3, 16), parent="head"),
+            part("body", (0, 1, 2), box(0, 55, -7, -10, -7, 14, 16, 20) + box(0, 91, -6, 6, -7, 12, 13, 18),
+                 rot=(PI / 2, 0, 0)),
+            part("right_hind_leg", (-8, -13, 18), box(96, 0, -4, 0, -4, 8, 37, 8)),
+            part("left_hind_leg", (8, -13, 18), box(96, 0, -4, 0, -4, 8, 37, 8, mirror=True)),
+            part("right_front_leg", (-8, -13, -5), box(64, 0, -4, 0, -4, 8, 37, 8)),
+            part("left_front_leg", (8, -13, -5), box(64, 0, -4, 0, -4, 8, 37, 8, mirror=True))]
+
+
+def ravager_bite(t):
+    f = math.sin(min(1.0, t / 0.5) * PI)
+    return {"neck": (None, (0, 0, -6 * f)), "mouth": (mc_x(PI / 2 * 0.3 * f), None)}
+
+
+RAVAGER = [(0, 1, None), (1, 2.0, gait(0.4, 2.0)), (3, 1.0, gait(0.8, 1.0)), (5, 1, die), (7, 0.5, ravager_bite)]
+
+
+# The evoker's fangs as EvokerFangsModel has them, 64x32: a base and two jaws on it, coming up out of the ground,
+# open by 1 - min(2p, 1)^3 of 0.35 of a half turn and so shut at half the bite, then going down: 0-1.1
+def fangs():
+    return [part("base", (-5, 24, -5), box(0, 0, 0, 0, 0, 10, 12, 10)),
+            part("upper_jaw", (1.5, 24, -4), box(40, 0, 0, 0, 0, 4, 14, 8), rot=(0, 0, 2.042035), parent="base"),
+            part("lower_jaw", (-1.5, 24, 4), box(40, 0, 0, 0, 0, 4, 14, 8), rot=(0, PI, 4.2411504), parent="base")]
+
+
+def bite(t):
+    # the bite's progress runs a second from the fangs' warm-up; the base rises (p + sin(2.7p)) * 7.2 while the root
+    # sits 24 - 20f down and f big, f falling to nothing in the last tenth
+    p = min(1.0, t)
+    gap = 1 - min(p * 2, 1.0) ** 3
+    shown = 1.0 if p <= 0.9 else max(1e-3, (1 - p) / 0.1)
+    return {"root": (None, (0, 24 - 20 * shown, 0), (shown, shown, shown)),
+            "base": (None, (0, -(p + math.sin(p * 2.7)) * 7.2, 0)),
+            "upper_jaw": (mc_z(PI - gap * 0.35 * PI - 2.042035), None),
+            "lower_jaw": (mc_z(PI + gap * 0.35 * PI - 4.2411504), None)}
+
+
+ANIMALS.update({"vindicator": ((64, 64), both_arms(held((64, 64))), VINDICATOR),
+                "evoker": ((64, 64), both_arms(), EVOKER),
+                "vex": ((32, 32), vex(), [(0, 0.39, vex_fly(False)), (1, 0.39, vex_fly(True)), (4, 1, die)]),
+                "ravager": ((128, 128), ravager(), RAVAGER),
+                "evoker_fangs": ((64, 32), fangs(), [(0, 1.1, bite)])})
 
 def normal(a, b, c):
     u = [b[i] - a[i] for i in range(3)]
