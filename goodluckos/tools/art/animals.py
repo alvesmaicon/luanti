@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # goodluck_models' creatures and things: Minecraft's models for its textures' layouts (the cow, the pig, the sheep
 # with its wool, the chicken, the horse, the donkey the mule shares, the spider, the zombie, the skeleton, the
-# villager, the boat, the arrow, the Nether's ghast, blaze, magma cube, zombified piglin and wither skeleton, and the
-# iron and snow golems, as 26.x has them), one skinned mesh each, every part a joint, animated as Minecraft animates
-# them.
+# villager, the boat, the arrow, the Nether's ghast, blaze, magma cube, zombified piglin and wither skeleton, the
+# iron and snow golems, the pillager and the banner a captain wears, as 26.x has them), one skinned mesh each, every
+# part a joint, animated as Minecraft animates them.
 # Written as binary glTF: Minecraft's model space (y down, the head toward -z, the right side toward -x) is turned to
 # glTF's (the head toward -z, which Luanti's loader turns to +z, where a mob looks at yaw 0), 10 units a node. Frames
 # are seconds: stand 0-1, walk from 1, run from 3, die 4-5, eat 6-8 (cow, sheep), rear 6-7.6 (horses), hit or aim
-# 6-6.5 (zombie, skeleton, zombified piglin, wither skeleton), lay 8-8.1 (villager), flap from 9 (chicken), hop 1-2
-# (magma cube); the blaze stands 0-10 and dies 11-12. The horses' saddle, bridle and chests and the skeletons' and
-# the piglin's bow or sword are a second primitive, so that a texture of their own draws them, and nothing where it
-# is blank
+# 6-6.5 (zombie, skeleton, zombified piglin, wither skeleton), charge 6-7.25 (pillager), lay 8-8.1 (villager), flap
+# from 9 (chicken), hop 1-2 (magma cube); the blaze stands 0-10 and dies 11-12. The horses' saddle, bridle and chests,
+# the skeletons' and the piglin's bow or sword and the pillager's crossbow are a second primitive, so that a texture
+# of their own draws them, and nothing where it is blank
 #   python3 goodluckos/tools/art/animals.py [out dir]
 import json, math, os, struct, sys
 from mcmodel import box, posed
@@ -906,6 +906,55 @@ def snow_golem():
 IRON_GOLEM = [(0, 1, None), (1, 2.0, lumber(0.25, 2.0)), (3, 1.5, lumber(0.44, 1.5)), (5, 1, die), (7, 0.5, golem_hit)]
 ANIMALS.update({"iron_golem": ((128, 128), iron_golem(), IRON_GOLEM),
                 "snow_golem": ((64, 64), snow_golem(), [(0, 1, None), (4, 1, die)])})
+
+
+# The illagers (goodluck_illagers), 64x64, as 26.x's IllagerModel: a tall head with its nose, the robe over the body,
+# the arms crossed or each on its own, the legs. The pillager holds a crossbow in the right hand (the second texture:
+# standby, a pull or loaded), its arms as AnimationUtils.animateCrossbowHold has them, or animateCrossbowCharge in the
+# 1.25 s a crossbow takes to load: stands 0-1, walks 1-2, runs 3-3.5, dies 4-5, charges 6-7.25
+CROSSBOW = (("t", 2 / 16, 0.1 / 16, -3 / 16), ("r", 0, -90), ("r", 1, 0), ("r", 2, -60), ("s", 0.9))
+
+
+def illager(crossed, item=()):
+    parts = [part("head", (0, 0, 0), box(0, 0, -4, -10, -4, 8, 10, 8)),
+             part("nose", (0, -2, 0), box(24, 0, -1, -1, -6, 2, 4, 2), parent="head"),
+             part("body", (0, 0, 0), box(16, 20, -4, 0, -3, 8, 12, 6) + box(0, 38, -4, 0, -3, 8, 20, 6, grow=0.5)),
+             part("right_leg", (-2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4)),
+             part("left_leg", (2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4, mirror=True))]
+    if crossed:
+        arms = box(44, 22, -8, -2, -2, 4, 8, 4) + box(44, 22, 4, -2, -2, 4, 8, 4, mirror=True) + \
+            box(40, 38, -4, 2, -2, 8, 4, 4)
+        return parts + [part("arms", (0, 3, -1), arms, rot=(-0.75, 0, 0))]
+    return parts + [part("right_arm", (-5, 2, 0), box(40, 46, -3, -2, -2, 4, 12, 4), gear=item),
+                    part("left_arm", (5, 2, 0), box(40, 46, -1, -2, -2, 4, 12, 4, mirror=True))]
+
+
+def crossbow_hold(t):
+    return {"right_arm": (mc_rot(-PI / 2 + 0.1, -0.3, 0), None), "left_arm": (mc_rot(-1.5, 0.6, 0), None)}
+
+
+def crossbow_charge(t):
+    f, x = min(1.0, t / 1.25), -0.97079635
+    return {"right_arm": (mc_rot(x, -0.8, 0), None),
+            "left_arm": (mc_rot(x + (-PI / 2 - x) * f, 0.4 + 0.45 * f, 0), None)}
+
+
+# a banner as BannerModel and BannerFlagModel have it, without its pole (worn on a captain's head): the bar, and the
+# flag hanging from it that sways as BannerRenderer's does, a turn every 100 ticks
+def banner():
+    return [part("bar", (0, 0, 0), box(0, 42, -10, 0, -1, 20, 2, 2)),
+            part("flag", (0, 0, 0), box(0, 0, -10, 0, -2, 20, 40, 1))]
+
+
+def flag(t):
+    return {"flag": (mc_x((-0.0125 + 0.01 * math.cos(2 * PI * t / 5)) * PI), None)}
+
+
+PILLAGER = [(0, 1, crossbow_hold), (1, 1.0, both(crossbow_hold, stride(0.7, 0, 1.0))),
+            (3, 0.5, both(crossbow_hold, stride(1.4, 0, 0.5))), (4, 1, both(die, crossbow_hold)),
+            (6, 1.25, crossbow_charge)]
+ANIMALS.update({"pillager": ((64, 64), illager(False, held((64, 64), 0, CROSSBOW)), PILLAGER),
+                "banner": ((64, 64), banner(), [(0, 5, flag)])})
 
 def normal(a, b, c):
     u = [b[i] - a[i] for i in range(3)]

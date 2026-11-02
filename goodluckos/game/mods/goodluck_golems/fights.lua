@@ -1,9 +1,9 @@
--- Who goes after whom, as Minecraft's mobs do: the zombie after players, villagers and iron golems; the skeleton, the
--- wither skeleton, the spider and the magma cube after players and iron golems; every other monster after players
--- only. Golems go after monsters (init.lua), and a mob hit by another one (or by its arrow, fireball or snowball)
--- goes after it. Villagers fight no one: they run from a zombie 8 away, and when they panic (that, or being hit),
--- three to five of them within 10 that slept in the last day and saw no iron golem for 30 s call one, as Minecraft's
--- villagers do. Every village has its iron golem, by the crossroads (goodluck_villages)
+-- Who goes after whom, as Minecraft's mobs do: the zombie and the pillager after players, villagers and iron golems;
+-- the skeleton, the wither skeleton, the spider and the magma cube after players and iron golems; every other monster
+-- after players only. Golems go after monsters (init.lua), and a mob hit by another one (or by its arrow, fireball or
+-- snowball) goes after it. Villagers fight no one: they run from a zombie 8 away (a pillager 15), and when they panic
+-- (that, or being hit), three to five of them within 10 that slept in the last day and saw no iron golem for 30 s
+-- call one, as Minecraft's villagers do. Every village has its iron golem, by the crossroads (goodluck_villages)
 local G = "goodluck_golems:"
 local IRON = G .. "iron_golem"
 local NPC, TRADER = "mobs_npc:npc", "mobs_npc:trader"
@@ -13,9 +13,10 @@ local TARGETS = {
 	["goodluck_monsters:spider"] = {"player", IRON},
 	["goodluck_nether:wither_skeleton"] = {"player", IRON},
 	["goodluck_nether:magma_cube"] = {"player", IRON},
+	["goodluck_illagers:pillager"] = {"player", NPC, TRADER, IRON},
 }
 -- what a villager runs from, and from how near (Minecraft's VillagerHostilesSensor)
-local FEARED = {["goodluck_monsters:zombie"] = 8}
+local FEARED = {["goodluck_monsters:zombie"] = 8, ["goodluck_illagers:pillager"] = 15}
 local VILLAGER = {[NPC] = true, [TRADER] = true}
 -- s that a golem seen keeps them from calling one, s between their looks for one, days since they last slept
 local SEEN, LOOK, SLEPT = 30, 10, 1

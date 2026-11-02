@@ -1,0 +1,18 @@
+-- Minecraft's illagers: the pillager (pillager.lua) and its crossbow, which the player can make and shoot too
+-- (crossbow.lua); patrols of pillagers led by a captain wearing the ominous banner (patrols.lua) and their outposts
+-- (outpost.lua); the ominous bottle a captain drops, which gives Bad Omen (omen.lua). Who they go after is
+-- goodluck_golems' fights.lua, with the rest of the monsters
+local S = core.get_translator("goodluck_illagers")
+local M = core.get_modpath("goodluck_illagers")
+local DIFFICULTY = {peaceful = 0, easy = 1, normal = 2, hard = 3}
+goodluck_illagers = {S = S,
+	difficulty = DIFFICULTY[Settings(core.get_worldpath() .. "/world.mt"):get("difficulty") or "normal"] or 2}
+if not core.settings:get_bool("mobs_spawn", true) or core.settings:get_bool("only_peaceful_mobs", false) then
+	goodluck_illagers.difficulty = 0
+end
+
+dofile(M .. "/omen.lua")
+dofile(M .. "/crossbow.lua")
+dofile(M .. "/pillager.lua")
+dofile(M .. "/patrols.lua")
+dofile(M .. "/outpost.lua")

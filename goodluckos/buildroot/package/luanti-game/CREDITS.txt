@@ -284,6 +284,16 @@ goodluck_golems
   Minetest Game's (default_snowball.png). The golems are goodluck_models' meshes
   of Minecraft's. Its code is goodluckOS's own (see goodluck_* below).
 
+goodluck_illagers
+  Its textures (the pillager, the crossbow and its three pulls and loaded, the
+  banner and the seven patterns of the ominous banner, the ominous bottle, the
+  Bad Omen and Raid Omen icons, the pillager's spawn egg) are Pixel Perfection
+  Legacy's by Nova Wostra (as goodluck_golems' above), copied by
+  goodluckos/tools/art/illagers.py, and so under CC BY-SA 4.0. The crossbow's
+  sounds are goodluckOS's own bow sounds (x_bows' replacements, below). The
+  pillager and the banner are goodluck_models' meshes of Minecraft's. Its code
+  is goodluckOS's own (see goodluck_* below).
+
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
@@ -292,10 +302,10 @@ goodluck_* mods and invisibility (but goodluck_villages' buildings and
 villagers' textures, goodluck_monsters' skins and spider eye, goodluck_chest's
 halves, goodluck_models' chests, minecart, boat, arrow and farm animals'
 textures, goodluck_horse's, goodluck_nether's, goodluck_effects',
-goodluck_potions', goodluck_swamp's, goodluck_end's, goodluck_elytra's and
-goodluck_golems' textures and goodluck_food's pufferfish, above), and the stamina, mobs_animal,
-mobs_monster, x_enchanting, mobs_npc and x_bows media above (but the
-half-drawn bow, CC BY-SA 4.0)
+goodluck_potions', goodluck_swamp's, goodluck_end's, goodluck_elytra's,
+goodluck_golems' and goodluck_illagers' textures and goodluck_food's
+pufferfish, above), and the stamina, mobs_animal, mobs_monster, x_enchanting,
+mobs_npc and x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art, the rat's and the bomb mushroom's models, and the item
   pickup, experience, bow, monster, horse equip and anvil sounds made for
   goodluckOS, under goodluckOS's license, GPL-2.0.

@@ -218,3 +218,13 @@ goodluck_golems_iron_golem_repair	mob/irongolem/repair
 goodluck_golems_snow_golem_hurt	entity/snowman/hurt1 entity/snowman/hurt2 entity/snowman/hurt3
 goodluck_golems_snow_golem_death	entity/snowman/death1 entity/snowman/death2 entity/snowman/death3
 goodluck_golems_throw	random/bow
+
+# The illagers (goodluck_illagers): the pillager now and then, hurt and dying; the crossbow loading, loaded and
+# shooting; Bad Omen coming
+goodluck_illagers_pillager	mob/pillager/idle1 mob/pillager/idle2 mob/pillager/idle3 mob/pillager/idle4
+goodluck_illagers_pillager_hurt	mob/pillager/hurt1 mob/pillager/hurt2 mob/pillager/hurt3
+goodluck_illagers_pillager_death	mob/pillager/death1 mob/pillager/death2
+goodluck_illagers_crossbow_loading_start	item/crossbow/loading_start
+goodluck_illagers_crossbow_loading_end	item/crossbow/loading_end
+goodluck_illagers_crossbow_shoot	item/crossbow/shoot1 item/crossbow/shoot2 item/crossbow/shoot3
+goodluck_illagers_bad_omen	event/mob_effects/bad_omen

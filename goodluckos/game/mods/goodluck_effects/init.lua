@@ -12,7 +12,8 @@ local TOP = 80
 local HEARTS = {poison = "goodluck_effects_heart_poisoned.png", wither = "goodluck_effects_heart_withered.png"}
 
 -- def: description, color ("#rrggbb"), bad, instant, physics(level) -> share for goodluck_physics, interval(level) ->
--- seconds between on_interval(player, level) calls, on_step(player, level, dtime), on_start(player, level), on_stop
+-- seconds between on_interval(player, level) calls, on_step(player, level, dtime), on_start(player, level), on_stop,
+-- icon, swirl (false: none, as the omens)
 function E.register(name, def)
 	def.icon = def.icon or "goodluck_effects_" .. name .. ".png"
 	E.registered[name] = def
@@ -90,9 +91,11 @@ local function swirl(player)
 	end
 	local r, g, b, n = 0, 0, 0, 0
 	for effect, e in pairs(active[name] or {}) do
-		local c = tonumber(E.registered[effect].color:sub(2), 16)
-		r, g, b, n = r + math.floor(c / 65536) * e.level, g + math.floor(c / 256) % 256 * e.level,
-			b + c % 256 * e.level, n + e.level
+		if E.registered[effect].swirl ~= false then
+			local c = tonumber(E.registered[effect].color:sub(2), 16)
+			r, g, b, n = r + math.floor(c / 65536) * e.level, g + math.floor(c / 256) % 256 * e.level,
+				b + c % 256 * e.level, n + e.level
+		end
 	end
 	if n == 0 then
 		return

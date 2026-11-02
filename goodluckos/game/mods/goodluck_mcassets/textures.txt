@@ -837,3 +837,24 @@ goodluck_golems_iron_golem_crackiness_high.png	{entity/iron_golem/iron_golem_cra
 goodluck_golems_snow_golem.png	{entity/snow_golem/snow_golem}
 goodluck_golems_iron_golem_egg.png	{item/iron_golem_spawn_egg}
 goodluck_golems_snow_golem_egg.png	{item/snow_golem_spawn_egg}
+
+# The illagers (goodluck_illagers): the pillager, the crossbow and its pulls, the banner and the ominous banner's
+# patterns, the ominous bottle, the omen icons, the egg
+goodluck_illagers_pillager.png	{entity/illager/pillager}
+goodluck_illagers_crossbow.png	{item/crossbow_standby}
+goodluck_illagers_crossbow_pulling_0.png	{item/crossbow_pulling_0}
+goodluck_illagers_crossbow_pulling_1.png	{item/crossbow_pulling_1}
+goodluck_illagers_crossbow_pulling_2.png	{item/crossbow_pulling_2}
+goodluck_illagers_crossbow_arrow.png	{item/crossbow_arrow}
+goodluck_illagers_banner_base.png	{entity/banner/banner_base}^{entity/banner/base}
+goodluck_illagers_banner_rhombus.png	{entity/banner/rhombus}
+goodluck_illagers_banner_stripe_bottom.png	{entity/banner/stripe_bottom}
+goodluck_illagers_banner_stripe_center.png	{entity/banner/stripe_center}
+goodluck_illagers_banner_border.png	{entity/banner/border}
+goodluck_illagers_banner_stripe_middle.png	{entity/banner/stripe_middle}
+goodluck_illagers_banner_half_horizontal.png	{entity/banner/half_horizontal}
+goodluck_illagers_banner_circle.png	{entity/banner/circle}
+goodluck_illagers_ominous_bottle.png	{item/ominous_bottle}
+goodluck_illagers_bad_omen.png	{mob_effect/bad_omen}
+goodluck_illagers_raid_omen.png	{mob_effect/raid_omen}
+goodluck_illagers_pillager_egg.png	{item/pillager_spawn_egg}
