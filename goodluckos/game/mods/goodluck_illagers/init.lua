@@ -2,8 +2,8 @@
 -- (crossbow.lua), the vindicator (vindicator.lua), the evoker with its fangs and vexes (evoker.lua), the ravager
 -- (ravager.lua) and the evoker's totem of undying (totem.lua); patrols of pillagers led by a captain wearing the
 -- ominous banner (patrols.lua) and their outposts (outpost.lua); the ominous bottle a captain drops, which gives Bad
--- Omen (omen.lua), and the raid Bad Omen brings on a village (raid.lua). Who they go after is goodluck_golems'
--- fights.lua, with the rest of the monsters
+-- Omen (omen.lua), and the raid Bad Omen brings on a village (raid.lua); woodland mansions (mansion.lua). Who they
+-- go after is goodluck_golems' fights.lua, with the rest of the monsters
 local S = core.get_translator("goodluck_illagers")
 local M = core.get_modpath("goodluck_illagers")
 local DIFFICULTY = {peaceful = 0, easy = 1, normal = 2, hard = 3}
@@ -23,3 +23,4 @@ dofile(M .. "/totem.lua")
 dofile(M .. "/patrols.lua")
 dofile(M .. "/outpost.lua")
 dofile(M .. "/raid.lua")
+dofile(M .. "/mansion.lua")

@@ -15,13 +15,19 @@ local alive = goodluck_illagers.alive
 local nether, the_end = core.global_exists("goodluck_nether"), core.global_exists("goodluck_end")
 local timer = EVERY + math.random(0, JITTER)
 
--- the captain's way to its point, the others' to their captain, a raider's to its raid's village; false while it
+-- the captain's way to its point, the others' to their captain, a raider's to its raid's village (a mansion's
+-- illager's back to its mansion); false while it
 -- walks there (and so skips mobs_redo's wandering), looking for targets once a second as mobs_redo would, and on a
 -- ravager it only looks. Every 3 s on the move it checks it went a node; if not (a tree, a wall, a drop), the captain
 -- takes another point and the others step aside a moment
 function goodluck_illagers.patrol(self, dtime)
 	local rider = self.object:get_attach() ~= nil
 	local center = self._raid and goodluck_illagers.raid_center(self._raid)
+	-- a mansion's illager walks back when it strays 16 out
+	local home = self._mansion
+	if not center and home and vector.distance(self.object:get_pos(), home) > 16 then
+		center = home
+	end
 	if not self._patrol and not center and not rider then
 		return
 	end
