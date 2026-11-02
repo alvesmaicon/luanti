@@ -252,6 +252,8 @@ A newer zip updates it the same way: the installer puts the new version in place
 
 The engine looks for its data next to itself, in the app's folder: on a card whose image is older and still has Luanti (and Update Luanti), the app takes Luanti's place in the launcher and never mixes with the image's copy.
 
+An image from before the App Installer, which carries Luanti and updates it with Update Luanti, takes the same app as a package: `goodluckos/tools/update-luanti.sh Luanti-<version>.zip <goodluckOS checkout>` (where GNU tar runs, such as goodluckOS's dev container) writes `luanti-<version>.tar.xz`, to be copied to `HOME/updates` and installed with Games -> Update Luanti. It puts the whole app where the image's Luanti was, with a launcher of that name that runs it there; the updater checks every file before it changes anything, keeps the version it replaces for Undo Luanti update, and the worlds in `HOME/.minetest` stay as they are.
+
 **Minecraft look for Luanti**, next to Luanti in the Games tab, gives Luanti the look and the sounds of your own Minecraft: Java Edition. With a copy of its `.minecraft` folder in HOME (as `minecraft` or `.minecraft`), it takes from the client jar with the most textures every texture Luanti has a place for, and from `assets` the sounds and the music (about 160 MB, copied once); a texture or sound that version lacks keeps Luanti's own. With the folder gone, running it again puts Luanti's own art back and removes the music. [What it takes](#what-minecraft-look-for-luanti-takes) lists it. Its steps are written to `HOME/logs/luanti-minecraft.log`.
 
 To build the zip yourself, see [Building the app](#building-the-app).
