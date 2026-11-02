@@ -197,8 +197,22 @@ for _, name in ipairs({"mobs_npc:npc", "mobs_npc:trader"}) do
 	end
 end
 
+-- Hero of the Village (goodluck_illagers' raids): each price down by 0.3 of it and 0.0625 more a level over I, at
+-- least 1 off and never under 1, as Villager.updateSpecialPrices has it
+local function discounted(player, price)
+	local level = core.global_exists("goodluck_effects") and goodluck_effects.get(player, "hero_of_the_village")
+	if not level then
+		return price
+	end
+	local stack = ItemStack(price)
+	local count = stack:get_count()
+	stack:set_count(math.max(1, count - math.max(math.floor((0.3 + 0.0625 * (level - 1)) * count), 1)))
+	return stack:to_string()
+end
+
 -- mobs_npc's shop, for item strings that carry an enchantment: buttons show the item and its count, the
--- tooltip its description (the trade itself is still mobs_npc's, by the button's name)
+-- tooltip its description (the trade itself is still mobs_npc's, by the button's name); the villager keeps its own
+-- prices and the trades the player sees, and mobs_npc takes, carry their discount
 local shop_trade = mobs_npc.shop_trade
 function mobs_npc.shop_trade(self, clicker, race)
 	local job = jobs[self.goodluck_job]
@@ -206,18 +220,23 @@ function mobs_npc.shop_trade(self, clicker, race)
 		return shop_trade(self, clicker, race)
 	end
 	if not self.trades or self.goodluck_trades ~= TRADES then
-		self.trades = {}
+		self.goodluck_base = {}
 		for i, t in ipairs(job) do
-			self.trades[i] = {type(t[1]) == "function" and t[1]() or t[1], t[2]}
+			self.goodluck_base[i] = {type(t[1]) == "function" and t[1]() or t[1], t[2]}
 		end
 		self.goodluck_trades = TRADES
 	end
+	self.goodluck_base = self.goodluck_base or table.copy(self.trades)
 	-- goods enchanted before get the moving glint
-	for _, t in ipairs(self.trades) do
+	for _, t in ipairs(self.goodluck_base) do
 		local goods = ItemStack(t[1])
 		if goodluck_enchanting and goodluck_enchanting.update(goods) then
 			t[1] = goods:to_string()
 		end
+	end
+	self.trades = {}
+	for i, t in ipairs(self.goodluck_base) do
+		self.trades[i] = {t[1], discounted(clicker, t[2])}
 	end
 	self.id = set_npc_id(self)
 	local fs = {"size[8,10]", default.gui_bg_img or "", default.gui_slots or "",

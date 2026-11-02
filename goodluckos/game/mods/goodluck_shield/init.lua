@@ -41,6 +41,9 @@ local function blocks(player, hitter)
 	return d.x * look.x + d.z * look.z > 0
 end
 
+-- whether the shield, raised, takes a hit from hitter (the ravager asks: a blocked bite can stun it)
+goodluck_shield = {blocks = blocks}
+
 local function set_slowed(player, name, on)
 	if (slowed[name] or false) == on then
 		return

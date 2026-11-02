@@ -649,6 +649,7 @@ goodluck_effects_night_vision.png	{mob_effect/night_vision}
 goodluck_effects_hunger.png	{mob_effect/hunger}
 goodluck_effects_heart_poisoned.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/poisoned_full}
 goodluck_effects_heart_withered.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/withered_full}
+goodluck_effects_heart_absorbing.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/absorbing_full}
 goodluck_effects_particle.png	{particle/effect_4}
 
 # The inventory (goodluck_craft: its window, its 9-sliced tabs, the open ones at the window's corners as the first and
@@ -827,6 +828,7 @@ goodluck_end_magenta_stained_glass.png	{block/magenta_stained_glass}
 goodluck_end_glitter.png	{particle/glitter_1}
 goodluck_end_dragon_head_worn.png	[combine:128x64:-48,-30={entity/enderdragon/dragon}^[mask:goodluck_end_hat_mask.png
 goodluck_effects_levitation.png	{mob_effect/levitation}
+goodluck_effects_absorption.png	{mob_effect/absorption}
 
 # The golems (goodluck_golems): the iron golem and its cracks, the snow golem (its pumpkin is the carved pumpkin's
 # faces above), their eggs

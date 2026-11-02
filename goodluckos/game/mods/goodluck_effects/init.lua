@@ -28,13 +28,13 @@ local function save(player)
 	player:get_meta():set_string("goodluck_effects", next(out) and core.write_json(out) or "")
 end
 
--- poisoned hearts win over withered ones, as in Minecraft; the health bar is the engine's, found by its texture's name
--- (goodluck_mcassets turns it into Minecraft's)
+-- poisoned hearts win over withered ones, as in Minecraft; the health bar is the engine's, found by its textures'
+-- names (goodluck_mcassets turns them into Minecraft's); Absorption's golden row is left alone
 local function hearts(player)
 	local list = active[player:get_player_name()] or {}
 	local text = list.poison and HEARTS.poison or list.wither and HEARTS.wither or "heart.png"
 	for id, def in pairs(player:hud_get_all()) do
-		if def.type == "statbar" and def.text:find("heart") then
+		if def.type == "statbar" and (def.text == "heart.png" or def.text == HEARTS.poison or def.text == HEARTS.wither) then
 			player:hud_change(id, "text", text)
 		end
 	end
@@ -472,6 +472,36 @@ E.register("night_vision", {description = S("Night Vision"), color = "#c2ff66",
 		end
 	end,
 	on_stop = function(player) night_vision(player, 0) end})
+-- golden hearts, 4 health a level, that take hits before the red ones and go with the effect (when the effect comes
+-- again it only tops them up); goodluck_hud draws them in a row over the hearts. What is left is kept over a rejoin
+local absorbing = {}
+local function absorb(player, hp)
+	local name = player:get_player_name()
+	absorbing[name] = hp > 0 and hp or nil
+	player:get_meta():set_int("goodluck_effects:absorbing", hp)
+	if core.global_exists("goodluck_hud") then
+		goodluck_hud.absorption(player, hp)
+	end
+end
+E.register("absorption", {description = S("Absorption"), color = "#2552a5",
+	on_start = function(player, level)
+		local name = player:get_player_name()
+		local kept = absorbing[name] or player:get_meta():get_int("goodluck_effects:absorbing")
+		absorb(player, math.max(kept, 4 * level))
+	end,
+	on_stop = function(player) absorb(player, 0) end})
+core.register_on_player_hpchange(function(player, change)
+	local hp = absorbing[player:get_player_name()]
+	if change >= 0 or not hp then
+		return change
+	end
+	local take = math.min(hp, -change)
+	absorb(player, hp - take)
+	return change + take
+end, true)
+core.register_on_leaveplayer(function(player)
+	absorbing[player:get_player_name()] = nil
+end)
 E.register("instant_health", {description = S("Instant Health"), color = "#f82423", instant = true})
 E.register("instant_damage", {description = S("Instant Damage"), color = "#a9656a", bad = true, instant = true})
 

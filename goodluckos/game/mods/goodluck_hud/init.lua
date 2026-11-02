@@ -1,5 +1,6 @@
 -- Armor above the hearts, hunger in the hearts' row on the right, breath one row above hunger, all of them over
--- goodluck_xp's bar
+-- goodluck_xp's bar; Absorption's golden hearts in a row over the hearts, the armor one row higher meanwhile
+goodluck_hud = {absorption = function() end}
 if not core.settings:get_bool("enable_damage") then
 	return
 end
@@ -90,8 +91,34 @@ core.register_on_joinplayer(function(player)
 	update_bars(player)
 end)
 
+local absorbing_hud = {}
+function goodluck_hud.absorption(player, hp)
+	local name = player:get_player_name()
+	local id = absorbing_hud[name]
+	if hp > 0 and not id then
+		absorbing_hud[name] = player:hud_add({
+			type = "statbar",
+			position = {x = 0.5, y = 1},
+			text = "goodluck_effects_heart_absorbing.png",
+			number = hp,
+			direction = 0,
+			size = {x = 24, y = 24},
+			offset = {x = -265, y = HEARTS_Y - ROW},
+		})
+	elseif hp > 0 then
+		player:hud_change(id, "number", hp)
+	elseif id then
+		player:hud_remove(id)
+		absorbing_hud[name] = nil
+	end
+	if armor_hud[name] then
+		player:hud_change(armor_hud[name], "offset", {x = -265, y = HEARTS_Y - (hp > 0 and 2 or 1) * ROW})
+	end
+end
+
 core.register_on_leaveplayer(function(player)
 	armor_hud[player:get_player_name()] = nil
+	absorbing_hud[player:get_player_name()] = nil
 end)
 
 if armor_mod then

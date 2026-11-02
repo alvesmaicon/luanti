@@ -1,9 +1,13 @@
 -- The ravager (Ravager): 100 of health, hardly pushed back, a bite for 12 that throws what it hits 1.5 away, after
 -- players, villagers and iron golems up to 32 away; it steps up a block, and breaks through the leaves it walks into
--- while mobs may change blocks. Drops a saddle. In a raid a pillager rides it
+-- while mobs may change blocks. Drops a saddle. In a raid a pillager rides it. A bite on a raised shield stuns it half
+-- the time (Ravager.blockedByItem): 2 s in a daze, and then it roars, 6 to everything within 4 but the illagers, and
+-- throws them off (strongKnockback: 4 over the square of the distance, a tick)
 local S = goodluck_illagers.S
 local N = "goodluck_illagers:"
 local RAVAGER = N .. "ravager"
+local STUN, ROAR_REACH, ROAR_DAMAGE = 2, 4, 6
+local ILLAGERS = {[N .. "pillager"] = true, [N .. "vindicator"] = true, [N .. "evoker"] = true}
 local griefing = core.settings:get_bool("mobs_griefing", true)
 goodluck_illagers.raiders[RAVAGER] = true
 
@@ -15,12 +19,60 @@ local function bite(self)
 	end
 	self:set_animation("punch", true)
 	self:mob_sound({name = "goodluck_illagers_ravager_bite", gain = 1})
+	local blocked = target:is_player() and core.global_exists("goodluck_shield") and
+		goodluck_shield.blocks(target, self.object)
+	if blocked and not self._stunned and math.random() < 0.5 then
+		self._stunned = STUN
+		self:mob_sound({name = "goodluck_illagers_ravager_stun", gain = 1})
+	end
 	target:punch(self.object, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = self.damage}}, nil)
-	local d = vector.subtract(target:get_pos(), self.object:get_pos())
-	d.y = 0
-	d = vector.length(d) > 0 and vector.normalize(d) or vector.new(0, 0, 1)
-	target:add_velocity(vector.new(d.x * 7.5, 2.5, d.z * 7.5))
+	if not blocked then
+		local d = vector.subtract(target:get_pos(), self.object:get_pos())
+		d.y = 0
+		d = vector.length(d) > 0 and vector.normalize(d) or vector.new(0, 0, 1)
+		target:add_velocity(vector.new(d.x * 7.5, 2.5, d.z * 7.5))
+	end
 	return false
+end
+
+local function roar(self)
+	local pos = self.object:get_pos()
+	self:set_animation("punch", true)
+	self:mob_sound({name = "goodluck_illagers_ravager_roar", gain = 1})
+	core.add_particlespawner({amount = 40, time = 0.3,
+		pos = {min = vector.offset(pos, -2, 0.2, -2), max = vector.offset(pos, 2, 2, 2)},
+		vel = {min = vector.new(-3, 0, -3), max = vector.new(3, 1.5, 3)}, exptime = {min = 0.4, max = 0.9},
+		size = {min = 2, max = 4}, texture = "goodluck_effects_particle.png^[multiply:#e0e0e0"})
+	for _, obj in ipairs(core.get_objects_inside_radius(pos, ROAR_REACH)) do
+		local ent = obj:get_luaentity()
+		local living = obj:is_player() and obj:get_hp() > 0 and not core.is_creative_enabled(obj:get_player_name()) or
+			ent and ent._cmi_is_mob and (ent.health or 0) > 0
+		if obj ~= self.object and living and not (ent and ILLAGERS[ent.name]) then
+			obj:punch(self.object, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = ROAR_DAMAGE}}, nil)
+			local d = vector.subtract(obj:get_pos(), pos)
+			local square = math.max(d.x * d.x + d.z * d.z, 0.001)
+			obj:add_velocity(vector.new(d.x / square * 16, 4, d.z / square * 16))
+		end
+	end
+end
+
+-- dazed: it stands, grey sparks over it, and roars when it comes to
+local function dazed(self, dtime)
+	self._stunned = self._stunned - dtime
+	self:set_velocity(0)
+	self:set_animation("stand")
+	self._spark = (self._spark or 0) - dtime
+	if self._spark <= 0 then
+		self._spark = 0.3
+		core.add_particlespawner({amount = 3, time = 0.3, attached = self.object,
+			pos = {min = vector.new(-0.6, 2.2, -1.4), max = vector.new(0.6, 2.6, -0.6)},
+			vel = {min = vector.new(-0.3, 0.6, -0.3), max = vector.new(0.3, 1, 0.3)}, exptime = {min = 0.5, max = 0.8},
+			size = {min = 1, max = 1.5}, texture = "goodluck_effects_particle.png^[multiply:#7f8392"})
+	end
+	if self._stunned <= 0 then
+		self._stunned = nil
+		roar(self)
+	end
 end
 
 -- the leaves it walks into go, as Ravager.aiStep breaks them on a horizontal collision with mobGriefing
@@ -80,6 +132,10 @@ mobs:register_mob(RAVAGER, {
 		die_start = 5, die_end = 6, die_loop = false,
 	},
 	do_custom = function(self, dtime)
+		if self._stunned then
+			dazed(self, dtime)
+			return false
+		end
 		trample(self, dtime)
 		if self.state ~= "attack" then
 			return goodluck_illagers.patrol(self, dtime)

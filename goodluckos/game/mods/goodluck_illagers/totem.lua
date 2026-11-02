@@ -1,6 +1,6 @@
 -- The totem of undying (the evoker's): held in the hand, it takes the blow that would kill, as Minecraft's
--- death_protection does: health back to 1, the effects gone, Regeneration II for 45 s and Fire Resistance for 40 s,
--- the totem used up, with its burst of green and yellow and the totem itself coming at the screen
+-- death_protection does: health back to 1, the effects gone, Regeneration II for 45 s, Absorption II for 5 s and Fire
+-- Resistance for 40 s, the totem used up, with its burst of green and yellow and the totem itself coming at the screen
 local S = goodluck_illagers.S
 local TOTEM = "goodluck_illagers:totem_of_undying"
 local E = goodluck_effects
@@ -54,6 +54,7 @@ core.register_on_mods_loaded(function()
 			end
 			E.clear(player)
 			E.apply(player, "regeneration", 45, 2)
+			E.apply(player, "absorption", 5, 2)
 			E.apply(player, "fire_resistance", 40, 1)
 			show(player)
 		end)

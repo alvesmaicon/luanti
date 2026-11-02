@@ -248,6 +248,8 @@ goodluck_illagers_ravager	mob/ravager/idle1 mob/ravager/idle2 mob/ravager/idle3 
 goodluck_illagers_ravager_hurt	mob/ravager/hurt1 mob/ravager/hurt2 mob/ravager/hurt3 mob/ravager/hurt4
 goodluck_illagers_ravager_death	mob/ravager/death1 mob/ravager/death2 mob/ravager/death3
 goodluck_illagers_ravager_bite	mob/ravager/bite1 mob/ravager/bite2 mob/ravager/bite3
+goodluck_illagers_ravager_stun	mob/ravager/stun1 mob/ravager/stun2 mob/ravager/stun3
+goodluck_illagers_ravager_roar	mob/ravager/roar1 mob/ravager/roar2 mob/ravager/roar3 mob/ravager/roar4
 goodluck_illagers_totem	item/totem/use_totem
 goodluck_illagers_raid_horn	event/raid/raidhorn_01 event/raid/raidhorn_02 event/raid/raidhorn_03 event/raid/raidhorn_04
 goodluck_illagers_raid_omen	event/mob_effects/raid_omen
