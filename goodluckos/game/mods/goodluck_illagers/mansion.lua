@@ -46,10 +46,11 @@ core.register_on_mods_loaded(function()
 	c.pane_flat = core.registered_nodes["xpanes:pane_flat"] ~= nil
 end)
 
--- woodland_mansion's chest: rolls, {item, min, max, weight}; what this game hasn't (leads, discs, chainmail, resin,
--- the enchanted golden apple yet) is left out
+-- woodland_mansion's chest: rolls, {item, min, max, weight}; what this game hasn't (leads, discs, chainmail, resin)
+-- is left out
 local LOOT = {
-	{1, 3, {{"goodluck_horse:golden_apple", 1, 1, 15}, {"farming:hoe_diamond", 1, 1, 15},
+	{1, 3, {{"goodluck_horse:golden_apple", 1, 1, 15}, {"goodluck_horse:enchanted_golden_apple", 1, 1, 2},
+		{"farming:hoe_diamond", 1, 1, 15},
 		{"3d_armor:chestplate_diamond", 1, 1, 5}, {"default:book", 1, 1, 10}, {"mobs:lasso", 1, 1, 20}}},
 	{1, 4, {{"default:steel_ingot", 1, 4, 10}, {"default:gold_ingot", 1, 4, 5}, {"farming:bread", 1, 1, 20},
 		{"farming:wheat", 1, 4, 20}, {"bucket:bucket_empty", 1, 1, 10}, {"goodluck_redstone:redstone", 1, 4, 15},

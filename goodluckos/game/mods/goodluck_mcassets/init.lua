@@ -180,8 +180,14 @@ core.register_on_mods_loaded(function()
 	for name, def in pairs(core.registered_items) do
 		local o = {}
 		for _, f in ipairs({"tiles", "overlay_tiles", "special_tiles"}) do o[f] = tiles(def[f]) end
-		for _, f in ipairs({"inventory_image", "wield_image"}) do
-			if swap(def[f]) ~= def[f] then o[f] = swap(def[f]) end
+		for _, f in ipairs({"inventory_image", "wield_image", "inventory_overlay", "wield_overlay"}) do
+			local v = def[f]
+			-- an animated one keeps its animation (the enchanted golden apple's glint)
+			if type(v) == "table" and swap(v.name) ~= v.name then
+				o[f] = {name = swap(v.name), animation = v.animation}
+			elseif swap(v) ~= v then
+				o[f] = swap(v)
+			end
 		end
 		o.sounds = sounds(def)
 		if next(o) and name ~= "" then core.override_item(name, o) end

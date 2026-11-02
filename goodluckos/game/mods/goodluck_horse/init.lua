@@ -49,6 +49,7 @@ local FOOD = {
 	["farming:wheat"] = {heal = 2, grow = 20, temper = 3},
 	["default:apple"] = {heal = 3, grow = 60, temper = 3},
 	["goodluck_horse:golden_apple"] = {heal = 10, grow = 240, temper = 10, love = true},
+	["goodluck_horse:enchanted_golden_apple"] = {heal = 10, grow = 240, temper = 10, love = true},
 	["farming:straw"] = {heal = 20, grow = 180},
 }
 
@@ -624,7 +625,7 @@ for kind, k in pairs(KINDS) do
 		fear_height = 3,
 		walk_chance = 60,
 		view_range = 7,
-		follow = {"goodluck_horse:golden_apple"},
+		follow = {"goodluck_horse:golden_apple", "goodluck_horse:enchanted_golden_apple"},
 		pushable = true,
 		hp_min = 15,
 		hp_max = 30,
@@ -780,23 +781,44 @@ end
 core.register_on_craft(function(itemstack, _, craft_grid) return dyed(itemstack, craft_grid) end)
 core.register_craft_predict(function(itemstack, _, craft_grid) return dyed(itemstack, craft_grid) end)
 
--- the golden apple: food for breeding horses, and for the player: four of hunger, then four of health over 5 s
+-- the golden apples: food for breeding horses, and for the player four of hunger and Minecraft's effects
+-- (goodluck_effects), eaten even when full, as Minecraft's are
+local function golden(effects)
+	return function(itemstack, user, pointed_thing)
+		local name = user:get_player_name()
+		if stamina and (stamina.get_saturation(user) or 0) >= stamina.VISUAL_MAX then
+			core.sound_play("stamina_eat", {to_player = name, gain = 0.7}, true)
+			if not core.is_creative_enabled(name) then
+				itemstack:take_item()
+			end
+		else
+			itemstack = core.do_item_eat(4, nil, itemstack, user, pointed_thing)
+		end
+		if core.global_exists("goodluck_effects") then
+			for _, e in ipairs(effects) do
+				goodluck_effects.apply(user, e[1], e[2], e[3])
+			end
+		end
+		return itemstack
+	end
+end
+
 core.register_craftitem("goodluck_horse:golden_apple", {
 	description = S("Golden Apple"),
 	inventory_image = G .. "golden_apple.png",
-	on_use = function(itemstack, user, pointed_thing)
-		local result = core.item_eat(4)(itemstack, user, pointed_thing)
-		local name = user:get_player_name()
-		for i = 1, 4 do
-			core.after(i * 1.25, function()
-				local p = core.get_player_by_name(name)
-				if p and p:get_hp() > 0 then
-					p:set_hp(p:get_hp() + 1)
-				end
-			end)
-		end
-		return result
-	end,
+	groups = {food = 1},
+	on_use = golden({{"regeneration", 5, 2}, {"absorption", 120, 1}}),
+})
+
+-- Minecraft's rare name colour and the glint of an enchanted item (goodluck_enchanting)
+core.register_craftitem("goodluck_horse:enchanted_golden_apple", {
+	description = core.colorize("#55ffff", S("Enchanted Golden Apple")),
+	inventory_image = G .. "golden_apple.png",
+	inventory_overlay = core.global_exists("goodluck_enchanting") and
+		goodluck_enchanting.glinting(G .. "golden_apple.png") or nil,
+	groups = {food = 1},
+	on_use = golden({{"regeneration", 20, 2}, {"absorption", 120, 4}, {"resistance", 300, 1},
+		{"fire_resistance", 300, 1}}),
 })
 
 core.register_craft({
@@ -808,13 +830,26 @@ core.register_craft({
 	},
 })
 
--- Minecraft's monster rooms: saddles and horse armor
+-- Minecraft's before 1.9, which since only finds it in chests
+core.register_craft({
+	output = "goodluck_horse:enchanted_golden_apple",
+	recipe = {
+		{"default:goldblock", "default:goldblock", "default:goldblock"},
+		{"default:goldblock", "default:apple", "default:goldblock"},
+		{"default:goldblock", "default:goldblock", "default:goldblock"},
+	},
+})
+
+-- Minecraft's monster rooms: saddles, horse armor and golden apples (the apples' chances those of a chest with 1 to 3
+-- draws of chests/simple_dungeon, weights 15 and 2 in 144)
 if core.get_modpath("dungeon_loot") then
 	dungeon_loot.register({
 		{name = "mobs:saddle", chance = 0.28},
 		{name = "goodluck_horse:armor_iron", chance = 0.19},
 		{name = "goodluck_horse:armor_gold", chance = 0.13},
 		{name = "goodluck_horse:armor_diamond", chance = 0.07},
+		{name = "goodluck_horse:golden_apple", chance = 0.19},
+		{name = "goodluck_horse:enchanted_golden_apple", chance = 0.03},
 	})
 end
 

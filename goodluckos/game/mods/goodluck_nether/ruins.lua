@@ -26,7 +26,8 @@ end)
 -- (iron nuggets, fire charge, clock, bell, glistering melon, the pressure plate) stays out
 local LOOT = {
 	{"default:obsidian", 1, 2, 40}, {"default:flint", 1, 4, 40}, {"fire:flint_and_steel", 1, 1, 40},
-	{"goodluck_horse:golden_apple", 1, 1, 15}, {"goodluck_food:gold_nugget", 4, 24, 15},
+	{"goodluck_horse:golden_apple", 1, 1, 15}, {"goodluck_horse:enchanted_golden_apple", 1, 1, 1},
+	{"goodluck_food:gold_nugget", 4, 24, 15},
 	{"default:sword_gold", 1, 1, 15, true}, {"default:axe_gold", 1, 1, 15, true}, {"farming:hoe_gold", 1, 1, 15, true},
 	{"default:shovel_gold", 1, 1, 15, true}, {"default:pick_gold", 1, 1, 15, true},
 	{"3d_armor:boots_gold", 1, 1, 15, true}, {"3d_armor:chestplate_gold", 1, 1, 15, true},

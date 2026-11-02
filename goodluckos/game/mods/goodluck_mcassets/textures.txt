@@ -832,6 +832,7 @@ goodluck_end_glitter.png	{particle/glitter_1}
 goodluck_end_dragon_head_worn.png	[combine:128x64:-48,-30={entity/enderdragon/dragon}^[mask:goodluck_end_hat_mask.png
 goodluck_effects_levitation.png	{mob_effect/levitation}
 goodluck_effects_absorption.png	{mob_effect/absorption}
+goodluck_effects_resistance.png	{mob_effect/resistance}
 
 # The golems (goodluck_golems): the iron golem and its cracks, the snow golem (its pumpkin is the carved pumpkin's
 # faces above), their eggs

@@ -343,7 +343,9 @@ if core.global_exists("mobs") and mobs.mob_class then
 end
 
 -- Slow Falling and Jump Boost against falls, Fire Resistance against lava, fire and anything that says it burns (a
--- hurt with fire = true, a punch by something with _fire: a fireball)
+-- hurt with fire = true, a punch by something with _fire: a fireball); then Resistance takes a fifth of what is left
+-- a level (all of it from V up), as Minecraft's, but not of starving, the void or /kill; the fractions of a point go on
+-- to the next hit
 local function burns(node)
 	return core.get_item_group(node or "", "lava") > 0 or core.get_item_group(node or "", "igniter") > 0 or
 		core.get_item_group(node or "", "fire") > 0
@@ -352,8 +354,13 @@ local function fiery(reason)
 	local ent = reason.type == "punch" and reason.object and reason.object:get_luaentity()
 	return reason.fire or ent and ent._fire or reason.type == "node_damage" and burns(reason.node)
 end
+local function unresisted(reason)
+	return reason.hunger or reason.cause == "goodluck_end:void" or reason.custom_type == "__builtin:kill_command"
+end
+local owed = {}
 core.register_on_player_hpchange(function(player, hp_change, reason)
-	local list = hp_change < 0 and active[player:get_player_name()]
+	local name = player:get_player_name()
+	local list = hp_change < 0 and active[name]
 	if not list then
 		return hp_change
 	end
@@ -361,13 +368,22 @@ core.register_on_player_hpchange(function(player, hp_change, reason)
 		if list.slow_falling then
 			return 0
 		elseif list.jump_boost then
-			return math.min(0, hp_change + list.jump_boost.level)
+			hp_change = math.min(0, hp_change + list.jump_boost.level)
 		end
 	elseif list.fire_resistance and fiery(reason) then
 		return 0
 	end
+	if list.resistance and not unresisted(reason) then
+		-- in 25ths of a point
+		local harm = -hp_change * math.max(0, 25 - 5 * list.resistance.level) + (owed[name] or 0)
+		owed[name] = harm % 25
+		return -math.floor(harm / 25)
+	end
 	return hp_change
 end, true)
+core.register_on_leaveplayer(function(player)
+	owed[player:get_player_name()] = nil
+end)
 
 local function hurt(player, by, floor)
 	local hp = player:get_hp()
@@ -428,6 +444,7 @@ E.register("regeneration", {description = S("Regeneration"), color = "#cd5cab", 
 E.register("strength", {description = S("Strength"), color = "#ffc700"})
 E.register("weakness", {description = S("Weakness"), color = "#484d48", bad = true})
 E.register("fire_resistance", {description = S("Fire Resistance"), color = "#ff9900"})
+E.register("resistance", {description = S("Resistance"), color = "#9146f0"})
 -- the breath stays full, so its bar never shows
 E.register("water_breathing", {description = S("Water Breathing"), color = "#98dac0",
 	on_step = function(player)

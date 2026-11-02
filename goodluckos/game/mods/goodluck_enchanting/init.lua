@@ -118,6 +118,11 @@ local function image_of(def, field)
 	return type(def[field]) == "string" and def[field] or ""
 end
 
+-- the overlay of an item that is always enchanted (the enchanted golden apple)
+function goodluck_enchanting.glinting(image)
+	return {name = sheen(image), animation = ANIMATION}
+end
+
 -- the glint of an enchanted stack, for the image its item has now (a bow's changes as it is drawn)
 function goodluck_enchanting.glint(stack)
 	local def = stack:get_definition()

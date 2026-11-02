@@ -211,10 +211,10 @@ goodluck_effects
   (https://codeberg.org/mineclonia/mineclonia, mcl_potions' effect icons,
   withered heart and swirl, mcl_hunger's poisoned heart and mcl_mobitems'
   feather; its LEGAL.md), copied under goodluck_effects' names by
-  goodluckos/tools/art/effects.py, and so under CC BY-SA 4.0; Absorption's icon
-  and golden heart (laid over the heart's container) are Pixel Perfection
-  Legacy's 26.3-97.2, by goodluckos/tools/art/absorption.py. Its code is
-  goodluckOS's own (see goodluck_* below).
+  goodluckos/tools/art/effects.py, and so under CC BY-SA 4.0; Absorption's and
+  Resistance's icons and the golden heart (laid over the heart's container) are
+  Pixel Perfection Legacy's 26.3-97.2, by goodluckos/tools/art/effects_legacy.py.
+  Its code is goodluckOS's own (see goodluck_* below).
 
 goodluck_potions
   The potions' bottle and liquid, the splash potion, the fermented spider eye,
