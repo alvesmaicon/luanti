@@ -251,17 +251,36 @@ HANDHELD = (("t", 0, 4 / 16, 0.5 / 16), ("r", 1, -90), ("r", 2, 55), ("s", 0.85)
 BOW = (("t", -1 / 16, -2 / 16, 2.5 / 16), ("r", 0, -80), ("r", 1, 260), ("r", 2, -40), ("s", 0.9))
 
 
+def extruded(at, tex):
+    # an item with its thickness, whatever its image (Minecraft's old renderItemIn2D): the image on both faces of a slab
+    # a sixteenth thick and, on each side of every column and row of pixels, a strip drawn with that column's or row's
+    # pixels, so that clear pixels leave holes and the outline shows as sides. A blended texture writes no depth: each
+    # side's strips go farthest first, the faces last. Each face comes with five empty ones behind it, which build()
+    # turns it away from; at places the unit square, tex is the model's texture size (the unit of its uv)
+    w, h = tex
+    zb, zf = 0.5 - 1 / 32, 0.5 + 1 / 32
+    faces = []
+
+    def face(quad, uv, behind):
+        faces.extend([([at(p) for p in quad], uv)] + [([at(behind)] * 4, uv)] * 5)
+
+    for k, x, side in [(k, k / 16, 1) for k in range(15, -1, -1)] + [(k, (k + 1) / 16, -1) for k in range(16)]:
+        face([(x, 1, zf), (x, 1, zb), (x, 0, zb), (x, 0, zf)], ((k + 0.25) * w / 16, 0, (k + 0.75) * w / 16, h),
+             (x + side / 4, 0.5, 0.5))
+    for j, y, side in [(j, 1 - j / 16, -1) for j in range(15, -1, -1)] + [(j, 1 - (j + 1) / 16, 1) for j in range(16)]:
+        face([(1, y, zb), (0, y, zb), (0, y, zf), (1, y, zf)], (0, (j + 0.25) * h / 16, w, (j + 0.75) * h / 16),
+             (0.5, y + side / 4, 0.5))
+    face([(1, 1, zf), (0, 1, zf), (0, 0, zf), (1, 0, zf)], (0, 0, w, h), (0.5, 0.5, zf - 0.25))
+    face([(0, 1, zb), (1, 1, zb), (1, 0, zb), (0, 0, zb)], (w, 0, 0, h), (0.5, 0.5, zb + 0.25))
+    return faces
+
+
 def held(tex, inward=0, display=HANDHELD):
     # an item in the right hand as Minecraft draws it (ItemInHandLayer, then the item model's display): from the arm's
     # pivot (the skeleton's moved inward 1) turned -90 about x and 180 about y, moved 1, 2 and -10 sixteenths, then the
-    # display about the item's middle; its image on a square at the middle of its thickness, each side as Minecraft's
-    # extruded item shows it, drawn whole by the second texture (tex: the model's texture size, the unit of its uv)
-    at = affine(("t", inward / 16, 0, 0), ("r", 0, -90), ("r", 1, 180), ("t", 1 / 16, 2 / 16, -10 / 16),
-                *display, ("t", -0.5, -0.5, -0.5))
-    tr, tl, bl, br = (at((x, y, 0.5)) for x, y in ((1, 1), (0, 1), (0, 0), (1, 0)))
-    w, h = tex
-    mid = at((0.5, 0.5, 0.5))
-    return [([tr, tl, bl, br], (0, 0, w, h)), ([tl, tr, br, bl], (w, 0, 0, h))] + [([mid] * 4, (0, 0, w, h))] * 4
+    # display about the item's middle; extruded, drawn whole by the second texture
+    return extruded(affine(("t", inward / 16, 0, 0), ("r", 0, -90), ("r", 1, 180), ("t", 1 / 16, 2 / 16, -10 / 16),
+                           *display, ("t", -0.5, -0.5, -0.5)), tex)
 
 
 def java_ints(seed, bound, n):
@@ -466,13 +485,9 @@ def witch():
 def potion(tex):
     # the potion held at the nose as WitchItemLayer draws it: 1 and 4 pixels from the nose's pivot, turned 180 about
     # z, 140 about x, 10 about z and 180 about x, then item/generated's ground display (2 up, half its size) about its
-    # middle; its image on a two-sided square, as held() draws an item
-    at = affine(("t", 1 / 16, 4 / 16, 0), ("r", 2, 180), ("r", 0, 140), ("r", 2, 10), ("r", 0, 180),
-                ("t", 0, 2 / 16, 0), ("s", 0.5), ("t", -0.5, -0.5, -0.5))
-    tr, tl, bl, br = (at((x, y, 0.5)) for x, y in ((1, 1), (0, 1), (0, 0), (1, 0)))
-    w, h = tex
-    mid = at((0.5, 0.5, 0.5))
-    return [([tr, tl, bl, br], (0, 0, w, h)), ([tl, tr, br, bl], (w, 0, 0, h))] + [([mid] * 4, (0, 0, w, h))] * 4
+    # middle; extruded, as held() draws an item
+    return extruded(affine(("t", 1 / 16, 4 / 16, 0), ("r", 2, 180), ("r", 0, 140), ("r", 2, 10), ("r", 0, 180),
+                           ("t", 0, 2 / 16, 0), ("s", 0.5), ("t", -0.5, -0.5, -0.5)), tex)
 
 
 def sip(t):
