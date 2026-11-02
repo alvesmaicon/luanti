@@ -22,7 +22,7 @@ LUANTI_DEPENDENCIES = freetype jpeg jsoncpp libgles libpng libvorbis luanti-libz
 # Luanti hashes with its own code otherwise, and libcrypto took ~4 MB of the process
 # the number stays 5.18.0 for games' min_minetest_version, the suffix goes up with each version of the app
 LUANTI_CONF_OPTS = \
-	-DVERSION_EXTRA=handheld.33 \
+	-DVERSION_EXTRA=handheld.34 \
 	-DBUILD_CLIENT=ON \
 	-DBUILD_SERVER=OFF \
 	-DBUILD_UNITTESTS=OFF \
