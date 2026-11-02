@@ -117,8 +117,8 @@ goodluck_monsters
   The spider eye, goodluck_monsters_spider_eye.png, is Pixel Perfection
   Legacy's too (goodluckos/tools/art/potions.py), and so are the witch's skin and
   egg, goodluck_monsters_witch.png and _witch_egg.png (goodluckos/tools/art/witch.py),
-  on goodluck_models' witch. The bomb mushroom's model, every other texture
-  and the sounds are goodluckOS's own (see goodluck_* below).
+  on goodluck_models' witch. The explosive mushroom's model, every other
+  texture and the sounds are goodluckOS's own (see goodluck_* below).
 
 goodluck_chest
   The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
@@ -311,6 +311,6 @@ goodluck_potions', goodluck_swamp's, goodluck_end's, goodluck_elytra's,
 goodluck_golems' and goodluck_illagers' textures and goodluck_food's
 pufferfish, above), and the stamina, mobs_animal, mobs_monster, x_enchanting,
 mobs_npc and x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
-  Code, pixel art, the rat's and the bomb mushroom's models, and the item
+  Code, pixel art, the rat's and the explosive mushroom's models, and the item
   pickup, experience, bow, monster, horse equip and anvil sounds made for
   goodluckOS, under goodluckOS's license, GPL-2.0.

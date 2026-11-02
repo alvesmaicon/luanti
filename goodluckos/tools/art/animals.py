@@ -3,8 +3,8 @@
 # with its wool, the chicken, the horse, the donkey the mule shares, the spider, the zombie, the skeleton, the
 # villager, the boat, the arrow, the Nether's ghast, blaze, magma cube, zombified piglin and wither skeleton, the
 # iron and snow golems, the illagers (the pillager and the banner a captain wears, the vindicator, the evoker and its
-# fangs, the vex, the ravager), as 26.x has them), one skinned mesh each, every part a joint, animated as Minecraft
-# animates them.
+# fangs, the vex, the ravager), the explosive mushroom's body in Minecraft's look, as 26.x has them), one skinned mesh
+# each, every part a joint, animated as Minecraft animates them.
 # Written as binary glTF: Minecraft's model space (y down, the head toward -z, the right side toward -x) is turned to
 # glTF's (the head toward -z, which Luanti's loader turns to +z, where a mob looks at yaw 0), 10 units a node. Frames
 # are seconds: stand 0-1, walk from 1, run from 3, die 4-5, eat 6-8 (cow, sheep), rear 6-7.6 (horses), hit or aim
@@ -1092,6 +1092,13 @@ ANIMALS.update({"vindicator": ((64, 64), both_arms(held((64, 64))), VINDICATOR),
                 "vex": ((32, 32), vex(), [(0, 0.39, vex_fly(False)), (1, 0.39, vex_fly(True)), (4, 1, die)]),
                 "ravager": ((128, 128), ravager(), RAVAGER),
                 "evoker_fangs": ((64, 32), fangs(), [(0, 1.1, bite)])})
+
+# the explosive mushroom's body when the player's Minecraft draws it, Minecraft's own for that texture: the head and
+# the body on one pivot, four short legs
+ANIMALS.update({"explosive_mushroom": ((64, 32), [
+    ("head", (0, 6, 0), (0, 0, 0), box(0, 0, -4, -8, -4, 8, 8, 8)),
+    ("body", (0, 6, 0), (0, 0, 0), box(16, 16, -4, 0, -2, 8, 12, 4)),
+] + legs(6, -4, 4, 2, False), QUADRUPED((0.7, 1.0), (1.0, 0.5)))})
 
 def normal(a, b, c):
     u = [b[i] - a[i] for i in range(3)]

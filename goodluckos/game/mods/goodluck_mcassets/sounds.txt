@@ -131,6 +131,8 @@ goodluck_monsters_zombie_hurt	mob/zombie/hurt1 mob/zombie/hurt2
 goodluck_monsters_skeleton	mob/skeleton/say1 mob/skeleton/say2 mob/skeleton/say3
 mobs_spider	mob/spider/say1 mob/spider/say2 mob/spider/say3 mob/spider/say4
 goodluck_monsters_mushroom_fuse	random/fuse
+goodluck_monsters_mushroom_hurt	mob/creeper/say1 mob/creeper/say2 mob/creeper/say3 mob/creeper/say4
+goodluck_monsters_mushroom_death	mob/creeper/death
 # The Nether's monsters; the blaze shoots with the ghast's fireball, as in Minecraft
 goodluck_nether_ghast	mob/ghast/moan1 mob/ghast/moan2 mob/ghast/moan3 mob/ghast/moan4 mob/ghast/moan5 mob/ghast/moan6 mob/ghast/moan7
 goodluck_nether_ghast_hurt	mob/ghast/scream1 mob/ghast/scream2 mob/ghast/scream3 mob/ghast/scream4 mob/ghast/scream5

@@ -33,6 +33,9 @@ for line in io.lines(core.get_modpath("goodluck_mcassets") .. "/textures.txt") d
 	end
 end
 
+-- for the mods that change more than a texture with it (goodluck_monsters' explosive mushroom)
+goodluck_mcassets = {draws = function(texture) return map[texture] ~= nil end}
+
 local function swap(s)
 	if type(s) ~= "string" or s == "" then return s end
 	if map[s] then return map[s] end

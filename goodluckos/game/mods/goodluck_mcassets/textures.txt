@@ -296,6 +296,8 @@ goodluck_monsters_spider.png	{entity/spider/spider}^{entity/spider/spider_eyes}
 # The zombie, the skeleton, the villagers (the plains skin, a job's clothes over it), the boat and the arrow
 goodluck_monsters_zombie.png	{entity/zombie/zombie}
 goodluck_monsters_skeleton.png	{entity/skeleton/skeleton}
+# The explosive mushroom (goodluck_monsters gives it Minecraft's body for it when this one is drawn)
+goodluck_monsters_mushroom.png	{entity/creeper/creeper}
 goodluck_villages_villager.png	{entity/villager/villager}^{entity/villager/type/plains}
 goodluck_villages_job_armorer.png	{entity/villager/profession/armorer}
 goodluck_villages_job_toolsmith.png	{entity/villager/profession/toolsmith}
@@ -589,6 +591,7 @@ character.png	{entity/player/wide/steve}^[sheet:1x2:0,0
 goodluck_monsters_zombie_egg.png	{item/zombie_spawn_egg}
 goodluck_monsters_skeleton_egg.png	{item/skeleton_spawn_egg}
 goodluck_monsters_spider_egg.png	{item/spider_spawn_egg}
+goodluck_monsters_mushroom_egg.png	{item/creeper_spawn_egg}
 goodluck_nether_ghast_egg.png	{item/ghast_spawn_egg}
 goodluck_nether_blaze_egg.png	{item/blaze_spawn_egg}
 goodluck_nether_magma_cube_egg.png	{item/magma_cube_spawn_egg}

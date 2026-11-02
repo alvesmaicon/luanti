@@ -1,7 +1,7 @@
 -- Minecraft's classic monsters: the zombie, the skeleton and the spider in its models (goodluck_models' meshes,
--- Pixel Perfection Legacy's skins) and, in the creeper's place, the bomb mushroom of our own. They come out in the
--- dark, on the surface and in caves (mobs_monster's own spawn no more); the zombie and the skeleton burn in the sun.
--- The witch (witch.lua) throws potions
+-- Pixel Perfection Legacy's skins) and the explosive mushroom of our own, which takes Minecraft's shape when the
+-- player's Minecraft draws it. They come out in the dark, on the surface and in caves (mobs_monster's own spawn no
+-- more); the zombie and the skeleton burn in the sun. The witch (witch.lua) throws potions
 local S = core.get_translator("goodluck_monsters")
 local MOD = "goodluck_monsters:"
 local BLANK = "goodluck_monsters_blank.png"
@@ -237,8 +237,8 @@ mobs:register_mob(MOD .. "spider", {
 	end,
 })
 
--- the bomb mushroom swells and puffs spores while its fuse burns, and walks its legs by bone overrides (its model
--- has bones and no keyframes): a pair forward and the other back, swapped every STEP seconds, eased by the client
+-- the explosive mushroom swells and puffs spores while its fuse burns, and walks its legs by bone overrides (its
+-- model has bones and no keyframes): a pair forward and the other back, swapped every STEP seconds, eased by the client
 local SWELL = 0.3
 local STEP, SWING = 0.3, 0.45
 local LEGS = {leg_fl = 1, leg_br = 1, leg_fr = -1, leg_bl = -1}
@@ -260,7 +260,7 @@ end
 
 mobs:register_mob(MOD .. "mushroom", {
 	type = "monster",
-	description = S("Bomb Mushroom"),
+	description = S("Explosive Mushroom"),
 	passive = false,
 	attack_type = "explode",
 	explosion_radius = 3,
@@ -278,7 +278,9 @@ mobs:register_mob(MOD .. "mushroom", {
 	rotate = 180,
 	textures = {{"goodluck_monsters_mushroom.png"}},
 	makes_footstep_sound = true,
-	sounds = {fuse = "goodluck_monsters_mushroom_fuse", explode = "tnt_explode"},
+	-- hurt and dying only with the player's Minecraft (goodluck_mcassets)
+	sounds = {fuse = "goodluck_monsters_mushroom_fuse", explode = "tnt_explode",
+		damage = "goodluck_monsters_mushroom_hurt", death = "goodluck_monsters_mushroom_death"},
 	walk_velocity = 1, run_velocity = 2,
 	view_range = 16,
 	jump = true,
@@ -291,12 +293,21 @@ mobs:register_mob(MOD .. "mushroom", {
 	light_damage = 0,
 	fear_height = 4,
 	do_custom = function(self, dtime)
-		walk_legs(self, dtime)
-		local k = self.v_start and 1 + SWELL * math.min(1, (self.explode_timer or 0) / self.explosion_timer) or 1
+		local f = self.v_start and math.min(1, (self.explode_timer or 0) / self.explosion_timer) or 0
+		local k, height
+		if self._mc_shape then
+			-- Minecraft's swell: the fuse to the fourth, 0.4 wider and 0.1 taller at the end
+			f = f ^ 4
+			k, height = 1 + 0.4 * f, 1 + 0.1 * f
+		else
+			walk_legs(self, dtime)
+			k = 1 + SWELL * f
+			height = k
+		end
 		if math.abs(k - (self._swell or 1)) < 0.03 then
 			return
 		end
-		if self.v_start and (self._swell or 1) == 1 then
+		if self.v_start and (self._swell or 1) == 1 and not self._mc_shape then
 			core.add_particlespawner({
 				amount = 30, time = 1.5, attached = self.object,
 				minpos = {x = -0.6, y = 1, z = -0.6}, maxpos = {x = 0.6, y = 1.6, z = 0.6},
@@ -306,9 +317,28 @@ mobs:register_mob(MOD .. "mushroom", {
 			})
 		end
 		self._swell = k
-		self.object:set_properties({visual_size = {x = k, y = k}})
+		self.object:set_properties({visual_size = {x = k, y = height}})
 	end,
 })
+
+-- with the player's Minecraft drawing it, the explosive mushroom takes Minecraft's body for it (goodluck_models), its
+-- size and its gunpowder alone; goodluck_mcassets loads after this mod, its list is there once all have loaded
+core.register_on_mods_loaded(function()
+	if not (core.global_exists("goodluck_mcassets") and goodluck_mcassets.draws("goodluck_monsters_mushroom.png")) then
+		return
+	end
+	local def = core.registered_entities[MOD .. "mushroom"]
+	local box = {-0.3, 0, -0.3, 0.3, 1.7, 0.3}
+	local mesh = "goodluck_models_explosive_mushroom.glb"
+	def.initial_properties.mesh, def.base_mesh = mesh, mesh
+	def.initial_properties.collisionbox, def.initial_properties.selectionbox = box, box
+	def.base_colbox, def.base_selbox = box, box
+	def.rotate = 0
+	def.animation = {speed_normal = 1, speed_run = 1, stand_start = 0, stand_end = 1, walk_start = 1, walk_end = 2,
+		run_start = 3, run_end = 3.5, die_start = 4, die_end = 5, die_loop = false}
+	def.drops = drops(tnt_mod and {name = "tnt:gunpowder", chance = 1, min = 0, max = 2})
+	def._mc_shape = true
+end)
 
 -- Instant Health hurts them and Instant Damage heals them, as Minecraft's undead
 if core.global_exists("goodluck_effects") then
