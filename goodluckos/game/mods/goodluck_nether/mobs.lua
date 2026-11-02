@@ -367,8 +367,9 @@ local function shoot(name, owner, from, to)
 end
 
 -- a target: who they had while still in range and seen in the last 3 s, else the nearest player in range they see
--- (when: more that must hold of a new one); looked for 4 times a second, _seen the time since they last saw it. With
--- foes, a mob that hit it comes first (mobs_redo's on_punch leaves it in self.attack), as Minecraft's blaze does
+-- (when: more that must hold of a new one), never one in creative; looked for 4 times a second, _seen the time since
+-- they last saw it. With foes, a mob that hit it comes first (mobs_redo's on_punch leaves it in self.attack), as
+-- Minecraft's blaze does
 local function eyes(obj)
 	local p = obj:get_pos()
 	return p and vector.offset(p, 0, obj:is_player() and obj:get_properties().eye_height or 1, 0)
@@ -394,7 +395,7 @@ local function target(self, dtime, from, range, when, foes)
 		self._target, self._seen = foe, 0
 	end
 	local t = self._target
-	if t and alive(t) and vector.distance(from, t:get_pos()) <= range then
+	if t and alive(t) and not creative(t) and vector.distance(from, t:get_pos()) <= range then
 		if self:line_of_sight(from, eyes(t)) then
 			self._seen = 0
 		end
@@ -407,8 +408,9 @@ local function target(self, dtime, from, range, when, foes)
 	for _, player in ipairs(core.get_connected_players()) do
 		local p = player:get_pos()
 		local d = vector.distance(from, p)
-		if d < near and player:get_hp() > 0 and not mobs:is_invisible(self, player:get_player_name()) and
-				(not when or when(p)) and self:line_of_sight(from, eyes(player)) then
+		if d < near and player:get_hp() > 0 and not creative(player) and
+				not mobs:is_invisible(self, player:get_player_name()) and (not when or when(p)) and
+				self:line_of_sight(from, eyes(player)) then
 			best, near = player, d
 		end
 	end
@@ -772,7 +774,7 @@ mobs:register_mob(N .. "zombified_piglin", {
 	animation = HUMANOID,
 	do_punch = function(self, hitter)
 		local by = hitter and hitter:get_luaentity()
-		if not hitter or not (hitter:is_player() or by and by._cmi_is_mob and by.name ~= self.name) then
+		if not hitter or creative(hitter) or not (hitter:is_player() or by and by._cmi_is_mob and by.name ~= self.name) then
 			return
 		end
 		local pos = self.object:get_pos()
